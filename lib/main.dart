@@ -6,6 +6,7 @@ import 'package:file_picker/file_picker.dart';
 import 'pages/team_page.dart';
 import 'pages/profile_page.dart';
 import 'pages/search_page.dart';
+import 'pages/iniciar_page.dart';
 
 
 void main() {
@@ -26,7 +27,7 @@ class ReportPlusApp extends StatelessWidget {
         textTheme: GoogleFonts.interTextTheme(),
         colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xffa61d2d)),
       ),
-      home: const LoginPage(),
+      home: const LoadingScreen(),
     );
   }
 }
