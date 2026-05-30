@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../main.dart';
+
+
 
 class ProfilePage extends StatelessWidget {
   final bool isAdmin;
@@ -121,6 +124,27 @@ Widget build(BuildContext context) {
                   onPressed: () {},
                   icon: const Icon(Icons.save_outlined),
                   label: const Text('Salvar Alterações'),
+                ),
+              ),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                height: 56,
+                child: FilledButton.icon(
+                  style: FilledButton.styleFrom(
+                    backgroundColor: const Color(0xffa61d2d),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(18),
+                    ),
+                  ),
+                  onPressed: () {
+                    Navigator.of(context).pushAndRemoveUntil( // Vai para o login
+                      MaterialPageRoute(builder: (_) => const LoginPage()),
+                      (route) => false, // tira as outras rotas
+                    );
+                  },
+                  icon: const Icon(Icons.logout_outlined),
+                  label: const Text('Sair'),
                 ),
               ),
             ],

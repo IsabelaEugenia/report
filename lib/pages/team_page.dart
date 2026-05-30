@@ -171,7 +171,7 @@ class _TeamPageState extends State<TeamPage> {
                   padding: const EdgeInsets.symmetric(
                       horizontal: 20, vertical: 16),
                   child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    mainAxisAlignment: MainAxisAlignment.start,
                     children: [
                       Text(
                         'Minha empresa',
@@ -181,16 +181,6 @@ class _TeamPageState extends State<TeamPage> {
                           fontWeight: FontWeight.w500,
                         ),
                       ),
-                      // Três barrinhas — só para admin
-                      if (widget.isAdmin)
-                        IconButton(
-                          onPressed: _abrirMenuCadastro,
-                          icon: const Icon(
-                            Icons.menu,
-                            color: Colors.white,
-                            size: 28,
-                          ),
-                        ),
                     ],
                   ),
                 ),
@@ -241,14 +231,14 @@ class _TeamPageState extends State<TeamPage> {
                   ),
                   const SizedBox(height: 20),
                   SizedBox(
-                    height: 180,
+                    height: 220,
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.end,
                       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                       children: graficoDados.map((dado) {
                         final isUltimo = dado == graficoDados.last;
                         final altura =
-                            (dado['valor'] as int) / maxValor * 150;
+                            (dado['valor'] as int) / maxValor * 140;
                         return Column(
                           mainAxisAlignment: MainAxisAlignment.end,
                           children: [

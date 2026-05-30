@@ -8,7 +8,6 @@ import 'pages/profile_page.dart';
 import 'pages/search_page.dart';
 import 'pages/iniciar_page.dart';
 
-
 void main() {
   runApp(const ReportPlusApp());
 }
@@ -99,7 +98,7 @@ class _LoginPageState extends State<LoginPage> {
                       Navigator.pushReplacement(
                         context,
                         MaterialPageRoute(
-                        builder: (_) => MainScreen(isAdmin: emailController.text == 'admin@empresa.com'),
+                        builder: (_) => MainScreen(isAdmin: emailController.text == 'admin@reportplus.com'),
                         ),
                       );
                     },
@@ -135,10 +134,16 @@ class _DashboardPageState extends State<DashboardPage> {
     filteredOcorrencias = List.from(widget.ocorrencias);
   }
 
-  @override
+   @override
   void dispose() {
     pesquisaController.dispose();
     super.dispose();
+  }
+
+  String _prioridadeTexto(double value) {   // ← adiciona aqui
+    if (value < 0.5) return 'Baixa';
+    if (value < 1.5) return 'Média';
+    return 'Alta';
   }
 
   void _searchOcorrencias(String query) {
@@ -164,17 +169,26 @@ class _DashboardPageState extends State<DashboardPage> {
   final isDesktop = width >= 1100;
   final isTablet = width >= 700 && width < 1100;
 
-  return SafeArea(
-    child: Center(
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 1500),
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            children: [
+    return Stack(
+      children:[
+        SafeArea(
+          child: Center(
+            child: ConstrainedBox(   
+              constraints: const BoxConstraints(maxWidth: 1500),
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                 children: [
         Row(
            children: [
-           Text('Report+'), 
+           Text(
+             'Report+',
+             style: GoogleFonts.inter(
+               fontSize: 28,
+               fontWeight: FontWeight.bold,
+               color: const Color(0xffa61d2d),
+             ),
+           ),
             const Spacer(),
             Container(
             decoration: BoxDecoration(
@@ -191,10 +205,6 @@ class _DashboardPageState extends State<DashboardPage> {
            decoration: BoxDecoration(
            color: Colors.white,
            borderRadius: BorderRadius.circular(16),
-      ),
-           child: IconButton(
-           onPressed: () {},
-           icon: const Icon(Icons.dark_mode_outlined),
       ),
     ),
   ],
@@ -219,17 +229,17 @@ class _DashboardPageState extends State<DashboardPage> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Expanded(flex: 2, child: buildCardsGrid(4)),
-                        const SizedBox(width: 24),
+                        const SizedBox(width: 16),
                         Expanded(flex: 3, child: buildLista()),
                       ],
                     )
                   else if (isTablet)
                     Expanded(
-                      child: Row(
+                      child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Expanded(child: buildCardsGrid(2)),
-                          const SizedBox(width: 18),
+                          const SizedBox(height: 16),
                           Expanded(child: buildLista()),
                         ],
                       ),
@@ -239,7 +249,7 @@ class _DashboardPageState extends State<DashboardPage> {
                       child: Column(
                         children: [
                           buildCardsGrid(2),
-                          const SizedBox(height: 20),
+                          const SizedBox(height: 16),
                           Expanded(child: buildLista()),
                         ],
                       ),
@@ -249,16 +259,31 @@ class _DashboardPageState extends State<DashboardPage> {
             ),
           ),
         ),
-      );
+      ),
+    if (!widget.isAdmin)
+      Positioned(
+        bottom: 16,
+        right: 16,
+        child: FloatingActionButton(
+          backgroundColor: const Color(0xffa61d2d),
+          onPressed: criarOcorrencia,
+          child: const Icon(Icons.add),
+        ),
+      ),
+      ],   
+    );                  
   }
               Widget buildCardsGrid(int crossAxisCount) {
+    final width = MediaQuery.of(context).size.width;
+    final aspectRatio = width < 700 ? 1.4 : 1.8;
+
     return GridView.count(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       crossAxisCount: crossAxisCount,
       crossAxisSpacing: 16,
       mainAxisSpacing: 16,
-      childAspectRatio: 1.8,
+      childAspectRatio: aspectRatio,
       children: [
         estatisticaCard('Ocorrências', '24'),
         estatisticaCard('Alta Prioridade', '8'),
@@ -281,10 +306,10 @@ class _DashboardPageState extends State<DashboardPage> {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Text(titulo, style: const TextStyle(color: Color(0xff7a7a7a))),
-          const SizedBox(height: 10),
+          const SizedBox(height: 16),
           Text(
             valor,
-            style: const TextStyle(fontSize: 34, fontWeight: FontWeight.bold),
+            style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
           ),
         ],
       ),
@@ -341,6 +366,30 @@ class _DashboardPageState extends State<DashboardPage> {
         ),
         child: Row(
           children: [
+            if (item['imagem'] != null || item['imagemUrl'] != null)
+            Container(
+              width: 90,
+              height: 90,
+              margin: const EdgeInsets.only(right: 16),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(20),
+                color: Colors.grey.shade200,
+              ),
+              clipBehavior: Clip.hardEdge,
+              child: item['imagem'] != null
+                  ? Image.file(
+                      item['imagem'] as File,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) =>
+                          const Icon(Icons.broken_image, color: Colors.grey),
+                    )
+                  : Image.network(
+                      item['imagemUrl'] as String,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) =>
+                          const Icon(Icons.broken_image, color: Colors.grey),
+                    ),
+            ),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -376,56 +425,76 @@ class _DashboardPageState extends State<DashboardPage> {
     );
   }
 
-  void abrirOcorrencia(Map<String, dynamic> item) {
-    showDialog(
-      context: context,
-      builder: (context) {
-        return Dialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(28),
-          ),
-          child: Container(
-            width: 600,
-            padding: const EdgeInsets.all(28),
-            child: SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    item['titulo'],
-                    style: const TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                    ),
+void abrirOcorrencia(Map<String, dynamic> item) {
+  showDialog(
+    context: context,
+    builder: (context) {
+      return Dialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(28),
+        ),
+        child: Container(
+          width: 600,
+          padding: const EdgeInsets.all(28),
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  item['titulo'],
+                  style: const TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
                   ),
-                  const SizedBox(height: 24),
-                  buildInfoField('Local', item['local']),
-                  buildInfoField('Descrição', item['descricao']),
-                  buildInfoField('Status', item['status']),
-                  buildInfoField('Prioridade', item['prioridade']),
-                  buildInfoField('Data', item['data']),
-                  const SizedBox(height: 24),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 54,
-                    child: FilledButton(
-                      style: FilledButton.styleFrom(
-                        backgroundColor: const Color(0xffa61d2d),
-                      ),
-                      onPressed: () {
-                        Navigator.pop(context);
-                      },
-                      child: const Text('Salvar Alterações'),
-                    ),
+                ),
+                const SizedBox(height: 24),
+                buildInfoField('Local', item['local']),
+                buildInfoField('Descrição', item['descricao']),
+                buildInfoField('Status', item['status']),
+                buildInfoField('Prioridade', item['prioridade']),
+                buildInfoField('Data', item['data']),
+                const SizedBox(height: 24),
+                if (item['imagem'] != null || item['imagemUrl'] != null)
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(20),
+                    child: item['imagem'] != null
+                        ? Image.file(
+                            item['imagem'] as File,
+                            width: double.infinity,
+                            height: 220,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) =>
+                                const Icon(Icons.broken_image, color: Colors.grey),
+                          )
+                        : Image.network(
+                            item['imagemUrl'] as String,
+                            width: double.infinity,
+                            height: 220,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) =>
+                                const Icon(Icons.broken_image, color: Colors.grey),
+                          ),
                   ),
-                ],
-              ),
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  height: 54,
+                  child: FilledButton(
+                    style: FilledButton.styleFrom(
+                      backgroundColor: const Color(0xffa61d2d),
+                    ),
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('Salvar Alterações'),
+                  ),
+                ),
+              ],
             ),
           ),
-        );
-      },
-    );
-  }
+        ),
+      );
+    },
+  );
+}
 
   void atualizarAndamento(Map<String, dynamic> item) {
     showDialog(
@@ -535,7 +604,7 @@ void _abrirSobre() {
                 const SizedBox(height: 8),
 
                 _sobreItem('Professores Responsáveis',
-                    'Prof. Dr. Elvio Gilberto da Silva\nProf. Me. Luis Felipe Grael Tinós\nProfessora Esp. Camila Floret Pelizon (professora colaboradora)'),
+                    'Prof. Dr. Elvio Gilberto da Silva\nProf. Me. Luis Felipe Grael Tinós\nProfessora Esp. Camila Floret Pelizon'),
                 const SizedBox(height: 8),
 
                 _sobreItem('Grupo 14',
@@ -548,54 +617,37 @@ void _abrirSobre() {
                 const Divider(height: 32),
 
                 // Logos
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    Column(
-                      children: [
-                        const Text(
-                          'Desenvolvimento:',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xff7a7a7a),
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Image.network(
-                          'https://unisagrado.edu.br/uploads/2008/logotipos/monoliticas_unisagrado/unisagrado.jpg',
-                          height: 48,
-                          errorBuilder: (_, __, ___) => const Text(
-                            'UNISAGRADO',
-                            style: TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                        ),
-                      ],
-                    ),
-                    Column(
-                      children: [
-                        const Text(
-                          'Apoio:',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xff7a7a7a),
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Image.network(
-                          'https://unisagrado.edu.br/uploads/2008/logotipos/monoliticas_unisagrado/coordenadoria-deextensao.jpg',
-                          height: 48,
-                          errorBuilder: (_, __, ___) => const Text(
-                            'Coordenadoria de Extensão',
-                            style: TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
+               const Divider(height: 32),
 
+                  const Text(
+                    'Desenvolvimento:',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xff7a7a7a),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  Image.asset(
+                    'assets/unisagrado.png',
+                    height: 120,
+                    fit: BoxFit.contain,
+                  ),
+                  const SizedBox(height: 20),
+                  const Text(
+                    'Apoio:',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xff7a7a7a),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Image.asset(
+                    'assets/coordenadoria_de_extensao.png',
+                    height: 90,
+                    fit: BoxFit.contain,
+                  ),
                 const SizedBox(height: 24),
                 SizedBox(
                   width: double.infinity,
@@ -668,8 +720,8 @@ Widget _sobreItem(String titulo, String valor) {
     final descricaoController = TextEditingController();
 
     String status = 'Em análise';
-    String prioridade = 'Baixa';
     File? imagem;
+    double prioridadeValue = 0;
 
     showDialog(
       context: context,
@@ -701,35 +753,35 @@ Widget _sobreItem(String titulo, String valor) {
                         maxLines: 5,
                         decoration: inputDecoration('Descrição'),
                       ),
+                     
                       const SizedBox(height: 18),
-                      DropdownButtonFormField<String>(
-                        initialValue: status,
-                        decoration: inputDecoration('Status'),
-                        items: ['Em análise', 'Em andamento', 'Finalizado']
-                            .map(
-                              (e) => DropdownMenuItem(value: e, child: Text(e)),
-                            )
-                            .toList(),
-                        onChanged: (v) {
+                     Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          'Prioridade: ${_prioridadeTexto(prioridadeValue)}',
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Slider(
+                        min: 0,
+                        max: 2,
+                        divisions: 2,
+                        value: prioridadeValue,
+                        label: _prioridadeTexto(prioridadeValue),
+                        onChanged: (value) {
                           setStateDialog(() {
-                            status = v!;
+                            prioridadeValue = value;
                           });
                         },
                       ),
-                      const SizedBox(height: 18),
-                      DropdownButtonFormField<String>(
-                        initialValue: prioridade,
-                        decoration: inputDecoration('Prioridade'),
-                        items: ['Baixa', 'Média', 'Alta']
-                            .map(
-                              (e) => DropdownMenuItem(value: e, child: Text(e)),
-                            )
-                            .toList(),
-                        onChanged: (v) {
-                          setStateDialog(() {
-                            prioridade = v!;
-                          });
-                        },
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: const [
+                          Text('Baixa'),
+                          Text('Média'),
+                          Text('Alta'),
+                        ],
                       ),
                       const SizedBox(height: 18),
                       SizedBox(
@@ -741,7 +793,7 @@ Widget _sobreItem(String titulo, String valor) {
                               type: FileType.image,
                             );
 
-                            if (result != null) {
+                            if (result != null && result.files.single.path != null) {
                               setStateDialog(() {
                                 imagem = File(result.files.single.path!);
                               });
@@ -750,11 +802,23 @@ Widget _sobreItem(String titulo, String valor) {
                           icon: const Icon(Icons.image_outlined),
                           label: Text(
                             imagem == null
-                                ? 'Selecionar Imagem'
-                                : imagem!.path.split('/').last,
+                                ? 'Importar imagem'
+                                : imagem!.path.split(Platform.pathSeparator).last,
                           ),
                         ),
                       ),
+                      if (imagem != null) ...[
+                        const SizedBox(height: 18),
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(18),
+                          child: Image.file(
+                            imagem!,
+                            width: double.infinity,
+                            height: 190,
+                            fit: BoxFit.cover,
+                          ),
+                        ),
+                      ],
                       const SizedBox(height: 24),
                       SizedBox(
                         width: double.infinity,
@@ -770,7 +834,7 @@ Widget _sobreItem(String titulo, String valor) {
                                 'local': localController.text,
                                 'descricao': descricaoController.text,
                                 'status': status,
-                                'prioridade': prioridade,
+                                'prioridade': _prioridadeTexto(prioridadeValue),
                                 'data': DateFormat(
                                   'dd/MM/yyyy',
                                 ).format(DateTime.now()),
@@ -839,6 +903,7 @@ class _MainScreenState extends State<MainScreen> {
       'descricao': 'Servidor principal sem comunicação.',
       'data': '18/05/2026',
       'imagem': null,
+      'imagemUrl': 'https://images.unsplash.com/photo-1558494949-ef010cbdcc31?w=400',
     },
     {
       'titulo': 'Câmera com Falha',
@@ -848,7 +913,9 @@ class _MainScreenState extends State<MainScreen> {
       'descricao': 'Imagem travando.',
       'data': '17/05/2026',
       'imagem': null,
+      'imagemUrl': 'https://images.unsplash.com/photo-1557597774-9d273605dfa9?w=400',
     },
+    
   ];
   @override
 void initState() {
@@ -864,11 +931,6 @@ void initState() {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-  floatingActionButton: FloatingActionButton(
-    backgroundColor: const Color(0xffa61d2d),
-    onPressed:() {},  
-    child: const Icon(Icons.add),
-  ),
       body: _pages[_currentIndex],
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,

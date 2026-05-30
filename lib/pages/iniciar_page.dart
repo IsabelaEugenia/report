@@ -64,7 +64,7 @@ Widget build(BuildContext context) {
           ],
         ),
       ),
-      child: Column(
+        child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           AnimatedBuilder(
@@ -74,31 +74,16 @@ Widget build(BuildContext context) {
                 opacity: _fadeAnimation,
                 child: ScaleTransition(
                   scale: _scaleAnimation,
-                  child: Container(
+                  child: Image.asset(
+                    'assets/logo.png',
                     width: 110,
                     height: 110,
-                    decoration: BoxDecoration(
-                      color: const Color(0xffa61d2d),
-                      borderRadius: BorderRadius.circular(28),
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color(0xffa61d2d).withValues(alpha: 0.4),
-                          blurRadius: 30,
-                          spreadRadius: 5,
-                        ),
-                      ],
-                    ),
-                    child: const Icon(
-                      Icons.warning_amber_rounded,
-                      color: Colors.white,
-                      size: 60,
-                    ),
                   ),
-                ),
-              );
-            },
-          ),
-
+                ),      // ← fecha ScaleTransition
+              );        // ← fecha FadeTransition
+            },          // ← fecha builder
+          ),            // ← fecha AnimatedBuilder
+    const SizedBox(height: 40),        
           const SizedBox(height: 40),
 
           const Text(
