@@ -7,8 +7,14 @@ import 'pages/team_page.dart';
 import 'pages/profile_page.dart';
 import 'pages/search_page.dart';
 import 'pages/iniciar_page.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
   runApp(const ReportPlusApp());
 }
 
