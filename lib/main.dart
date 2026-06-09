@@ -9,6 +9,8 @@ import 'pages/search_page.dart';
 import 'pages/iniciar_page.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -36,17 +38,54 @@ class ReportPlusApp extends StatelessWidget {
     );
   }
 }
-
-class LoginPage extends StatefulWidget {
-  const LoginPage({super.key});
-
-  @override
-  State<LoginPage> createState() => _LoginPageState();
-}
-
 class _LoginPageState extends State<LoginPage> {
   final emailController = TextEditingController();
   final senhaController = TextEditingController();
+  bool _carregando = false;
+  String? _erro;
+
+  Future<void> _login() async {
+    setState(() {
+      _carregando = true;
+      _erro = null;
+    });
+
+    try {
+      // faz login no Firebase Auth
+      final credential = await FirebaseAuth.instance.signInWithEmailAndPassword(
+        email: emailController.text.trim(),
+        password: senhaController.text.trim(),
+      );
+
+      // busca o tipo do usuário no Firestore
+      final doc = await FirebaseFirestore.instance
+          .collection('usuarios')
+          .where('email', isEqualTo: emailController.text.trim())
+          .get();
+
+      final tipo = doc.docs.first.data()['tipo'] as String;
+      final isAdmin = tipo == 'admin';
+
+      if (mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => MainScreen(isAdmin: isAdmin),
+          ),
+        );
+      }
+    } on FirebaseAuthException catch (e) {
+      setState(() {
+        _erro = e.code == 'user-not-found'
+            ? 'Usuário não encontrado.'
+            : e.code == 'wrong-password'
+                ? 'Senha incorreta.'
+                : 'Erro ao fazer login. Tente novamente.';
+      });
+    } finally {
+      setState(() => _carregando = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -89,6 +128,13 @@ class _LoginPageState extends State<LoginPage> {
                   obscureText: true,
                   decoration: inputDecoration('Senha'),
                 ),
+                if (_erro != null) ...[
+                  const SizedBox(height: 12),
+                  Text(
+                    _erro!,
+                    style: const TextStyle(color: Colors.red, fontSize: 13),
+                  ),
+                ],
                 const SizedBox(height: 30),
                 SizedBox(
                   width: double.infinity,
@@ -100,15 +146,10 @@ class _LoginPageState extends State<LoginPage> {
                         borderRadius: BorderRadius.circular(16),
                       ),
                     ),
-                    onPressed: () {
-                      Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(
-                        builder: (_) => MainScreen(isAdmin: emailController.text == 'admin@reportplus.com'),
-                        ),
-                      );
-                    },
-                    child: const Text('Entrar'),
+                    onPressed: _carregando ? null : _login,
+                    child: _carregando
+                        ? const CircularProgressIndicator(color: Colors.white)
+                        : const Text('Entrar'),
                   ),
                 ),
               ],
