@@ -38,6 +38,12 @@ class ReportPlusApp extends StatelessWidget {
     );
   }
 }
+class LoginPage extends StatefulWidget {   
+  const LoginPage({super.key});
+
+  @override
+  State<LoginPage> createState() => _LoginPageState();
+}
 class _LoginPageState extends State<LoginPage> {
   final emailController = TextEditingController();
   final senhaController = TextEditingController();
@@ -52,7 +58,7 @@ class _LoginPageState extends State<LoginPage> {
 
     try {
       // faz login no Firebase Auth
-      final credential = await FirebaseAuth.instance.signInWithEmailAndPassword(
+      await FirebaseAuth.instance.signInWithEmailAndPassword(
         email: emailController.text.trim(),
         password: senhaController.text.trim(),
       );
@@ -187,7 +193,7 @@ class _DashboardPageState extends State<DashboardPage> {
     super.dispose();
   }
 
-  String _prioridadeTexto(double value) {   // ← adiciona aqui
+  String _prioridadeTexto(double value) {   
     if (value < 0.5) return 'Baixa';
     if (value < 1.5) return 'Média';
     return 'Alta';

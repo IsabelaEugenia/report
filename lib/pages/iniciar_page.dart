@@ -35,7 +35,7 @@ class _LoadingScreenState extends State<LoadingScreen>
     Future.delayed(const Duration(seconds: 3), () {
       if (mounted) {
         Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => const LoginPage()),  // ← troca aqui
+          MaterialPageRoute(builder: (_) => const LoginPage()),  
         );
       }
     });
@@ -79,10 +79,10 @@ Widget build(BuildContext context) {
                     width: 110,
                     height: 110,
                   ),
-                ),      // ← fecha ScaleTransition
-              );        // ← fecha FadeTransition
-            },          // ← fecha builder
-          ),            // ← fecha AnimatedBuilder
+                ),     
+              );       
+            },          
+          ),            
     const SizedBox(height: 40),        
           const SizedBox(height: 40),
 
