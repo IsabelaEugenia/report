@@ -663,7 +663,7 @@ void _abrirSobre() {
                 const SizedBox(height: 8),
 
                 _sobreItem('Grupo 14',
-                    'Bruno Mansano dos Passos\nDiego Costanzo Galvão\nIsabela Eugênia Teixeira Ferraz de Oliveira\nJoão Igor Alves Oros Reis\nLucas Augusto Martins'),
+                    'Bruno Mansano dos Passos\nDiego Costanzo Galvão\nIsabela Eugênia Teixeira Ferraz de Oliveira\nJoão Igor Alves Oros Reis\nLucas Augusto Martins\n\nCiência da Computação (CC)'),
                 const SizedBox(height: 8),
 
                 _sobreItem('Sobre o App',
