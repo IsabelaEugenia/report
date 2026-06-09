@@ -38,6 +38,14 @@ class ReportPlusApp extends StatelessWidget {
     );
   }
 }
+
+class LoginPage extends StatefulWidget {
+  const LoginPage({super.key});
+
+  @override
+  State<LoginPage> createState() => _LoginPageState();
+}
+
 class _LoginPageState extends State<LoginPage> {
   final emailController = TextEditingController();
   final senhaController = TextEditingController();
@@ -655,7 +663,7 @@ void _abrirSobre() {
                 const SizedBox(height: 8),
 
                 _sobreItem('Grupo 14',
-                    'Bruno Mansano\nDiego Galvão\nIsabela Eugênia\nJoão Igor\nLucas Martins'),
+                    'Bruno Mansano dos Passos\nDiego Costanzo Galvão\nIsabela Eugênia Teixeira Ferraz de Oliveira\nJoão Igor Alves Oros Reis\nLucas Augusto Martins'),
                 const SizedBox(height: 8),
 
                 _sobreItem('Sobre o App',
