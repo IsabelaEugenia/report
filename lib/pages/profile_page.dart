@@ -156,49 +156,55 @@ Widget build(BuildContext context) {
   );
 }
 
-  Widget infoCard(
-    String titulo,
-    String valor,
-    IconData icon,
-  ) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-
-      decoration: BoxDecoration(
-        color: const Color(0xfff8f8f8),
-        borderRadius: BorderRadius.circular(22),
-      ),
-
-      child: Column(
-        children: [
-          Icon(
-            icon,
-            size: 34,
-            color: const Color(0xffa61d2d),
-          ),
-
-          const SizedBox(height: 12),
-
-          Text(
-            titulo,
-            style: const TextStyle(
-              color: Color(0xff7a7a7a),
+Widget infoCard(
+  String titulo,
+  String valor,
+  IconData icon,
+) {
+  return SizedBox(
+    width: 180, // aumenta a largura
+    height: 220, // aumenta a altura
+    child: AspectRatio(
+      aspectRatio: 1, // mantém quadrado
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: const Color(0xfff8f8f8),
+          borderRadius: BorderRadius.circular(22),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Icon(
+              icon,
+              size: 34,
+              color: const Color(0xffa61d2d),
             ),
-          ),
-
-          const SizedBox(height: 6),
-
-          Text(
-            valor,
-            style: const TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
+            const SizedBox(height: 12),
+            Text(
+              titulo,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: Color(0xff7a7a7a),
+              ),
             ),
-          ),
-        ],
+            const SizedBox(height: 10),
+            Text(
+              valor,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
       ),
-    );
-  }
+    ),
+  );
+}
+
 
   Widget buildField(
     String titulo,
