@@ -47,6 +47,7 @@ Widget build(BuildContext context) {
               const SizedBox(height: 20),
               Text(
                 isAdmin ? 'Administrador Master' : 'Nome do Funcionário',
+                textAlign: TextAlign.center,
                 style: GoogleFonts.inter(
                   fontSize: 28,
                   fontWeight: FontWeight.bold,
