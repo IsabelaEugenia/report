@@ -942,8 +942,7 @@ Widget _sobreItem(String titulo, String valor) {
                           style: FilledButton.styleFrom(
                             backgroundColor: const Color(0xffa61d2d),
                           ),
-                          onPressed: () {
-                            setState(() {
+                          onPressed: () async {
                               final newItem = {
                                 'titulo': tituloController.text,
                                 'local': localController.text,
@@ -957,10 +956,12 @@ Widget _sobreItem(String titulo, String valor) {
                               };
 
                               await FirebaseFirestore.instance
-                              .collection('ocorrencias')
-                              .add(newItem);
-                              _searchOcorrencias(pesquisaController.text);
-                            });
+                                .collection('ocorrencias')
+                                .add(newItem);
+                              
+                              setState(() {
+                                _searchOcorrencias(pesquisaController.text);
+                              });
 
                             Navigator.pop(context);
                           },

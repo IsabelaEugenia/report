@@ -162,8 +162,8 @@ Widget infoCard(
   IconData icon,
 ) {
   return SizedBox(
-    width: 180, // aumenta a largura
-    height: 220, // aumenta a altura
+    width: 220, // aumenta a largura
+    height: 180, // aumenta a altura
     child: AspectRatio(
       aspectRatio: 1, // mantém quadrado
       child: Container(
