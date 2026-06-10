@@ -38,21 +38,13 @@ class ReportPlusApp extends StatelessWidget {
     );
   }
 }
-<<<<<<< HEAD
 class LoginPage extends StatefulWidget {   
-=======
-
-class LoginPage extends StatefulWidget {
->>>>>>> 6486e953ed510692c493401e06a564e2312756f3
   const LoginPage({super.key});
 
   @override
   State<LoginPage> createState() => _LoginPageState();
 }
-<<<<<<< HEAD
-=======
 
->>>>>>> 6486e953ed510692c493401e06a564e2312756f3
 class _LoginPageState extends State<LoginPage> {
   final emailController = TextEditingController();
   final senhaController = TextEditingController();
@@ -72,7 +64,6 @@ class _LoginPageState extends State<LoginPage> {
         password: senhaController.text.trim(),
       );
 
-      // busca o tipo do usuário no Firestore
       final doc = await FirebaseFirestore.instance
           .collection('usuarios')
           .where('email', isEqualTo: emailController.text.trim())
@@ -335,48 +326,48 @@ class _DashboardPageState extends State<DashboardPage> {
       ],   
     );                  
   }
-              Widget buildCardsGrid(int crossAxisCount) {
-    final width = MediaQuery.of(context).size.width;
-    final aspectRatio = width < 700 ? 1.4 : 1.8;
+  Widget buildCardsGrid(int crossAxisCount) {
+  final width = MediaQuery.of(context).size.width;
+  final aspectRatio = width < 400 ? 1.0 : width < 700 ? 1.4 : 1.8;
 
-    return GridView.count(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      crossAxisCount: crossAxisCount,
-      crossAxisSpacing: 16,
-      mainAxisSpacing: 16,
-      childAspectRatio: aspectRatio,
+  return GridView.count(
+    shrinkWrap: true,
+    physics: const NeverScrollableScrollPhysics(),
+    crossAxisCount: crossAxisCount,
+    crossAxisSpacing: 16,
+    mainAxisSpacing: 16,
+    childAspectRatio: aspectRatio,
+    children: [
+      estatisticaCard('Ocorrências', '24'),
+      estatisticaCard('Alta Prioridade', '8'),
+      estatisticaCard('Em Andamento', '11'),
+      estatisticaCard('Finalizadas', '13'),
+    ],
+  );
+}
+
+Widget estatisticaCard(String titulo, String valor) {
+  return Container(
+    padding: const EdgeInsets.all(12),
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(24),
+      border: Border.all(color: const Color(0xffe8e8e8)),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        estatisticaCard('Ocorrências', '24'),
-        estatisticaCard('Alta Prioridade', '8'),
-        estatisticaCard('Em Andamento', '11'),
-        estatisticaCard('Finalizadas', '13'),
+        Text(titulo, style: const TextStyle(color: Color(0xff7a7a7a))),
+        const SizedBox(height: 8),
+        Text(
+          valor,
+          style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+        ),
       ],
-    );
-  }
-
-  Widget estatisticaCard(String titulo, String valor) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: const Color(0xffe8e8e8)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Text(titulo, style: const TextStyle(color: Color(0xff7a7a7a))),
-          const SizedBox(height: 16),
-          Text(
-            valor,
-            style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
-          ),
-        ],
-      ),
-    );
-  }
+    ),
+  );
+}
 
   Widget buildLista() {
     return Container(
