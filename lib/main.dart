@@ -38,21 +38,14 @@ class ReportPlusApp extends StatelessWidget {
     );
   }
 }
-<<<<<<< HEAD
-class LoginPage extends StatefulWidget {   
-=======
 
 class LoginPage extends StatefulWidget {
->>>>>>> 6486e953ed510692c493401e06a564e2312756f3
   const LoginPage({super.key});
 
   @override
   State<LoginPage> createState() => _LoginPageState();
 }
-<<<<<<< HEAD
-=======
 
->>>>>>> 6486e953ed510692c493401e06a564e2312756f3
 class _LoginPageState extends State<LoginPage> {
   final emailController = TextEditingController();
   final senhaController = TextEditingController();
@@ -67,7 +60,7 @@ class _LoginPageState extends State<LoginPage> {
 
     try {
       // faz login no Firebase Auth
-      await FirebaseAuth.instance.signInWithEmailAndPassword(
+      final credential = await FirebaseAuth.instance.signInWithEmailAndPassword(
         email: emailController.text.trim(),
         password: senhaController.text.trim(),
       );
@@ -202,7 +195,7 @@ class _DashboardPageState extends State<DashboardPage> {
     super.dispose();
   }
 
-  String _prioridadeTexto(double value) {   
+  String _prioridadeTexto(double value) {   // ← adiciona aqui
     if (value < 0.5) return 'Baixa';
     if (value < 1.5) return 'Média';
     return 'Alta';
@@ -337,7 +330,7 @@ class _DashboardPageState extends State<DashboardPage> {
   }
               Widget buildCardsGrid(int crossAxisCount) {
     final width = MediaQuery.of(context).size.width;
-    final aspectRatio = width < 700 ? 1.4 : 1.8;
+    final aspectRatio = width < 400 ? 1.0 : width < 700 ? 1.4 : 1.8;
 
     return GridView.count(
       shrinkWrap: true,
@@ -357,21 +350,21 @@ class _DashboardPageState extends State<DashboardPage> {
 
   Widget estatisticaCard(String titulo, String valor) {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(24),
         border: Border.all(color: const Color(0xffe8e8e8)),
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Text(titulo, style: const TextStyle(color: Color(0xff7a7a7a))),
-          const SizedBox(height: 16),
+          const SizedBox(height: 8),
           Text(
             valor,
-            style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
+            style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
           ),
         ],
       ),
@@ -380,7 +373,7 @@ class _DashboardPageState extends State<DashboardPage> {
 
   Widget buildLista() {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(28),
@@ -421,7 +414,7 @@ class _DashboardPageState extends State<DashboardPage> {
         }
       }, 
       child: Container(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           color: const Color(0xfff8f8f8),
           borderRadius: BorderRadius.circular(24),
