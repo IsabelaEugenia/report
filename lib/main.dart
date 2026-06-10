@@ -60,7 +60,7 @@ class _LoginPageState extends State<LoginPage> {
 
     try {
       // faz login no Firebase Auth
-      final credential = await FirebaseAuth.instance.signInWithEmailAndPassword(
+      await FirebaseAuth.instance.signInWithEmailAndPassword(
         email: emailController.text.trim(),
         password: senhaController.text.trim(),
       );
@@ -182,7 +182,28 @@ class _DashboardPageState extends State<DashboardPage> {
   final pesquisaController = TextEditingController();
   late List<Map<String, dynamic>> filteredOcorrencias;
 
- 
+  String obterSetor(String categoria) {
+    switch (categoria) {
+      case 'informatica':
+        return 'ti';
+
+      case 'estrutura':
+        return 'manutencao';
+
+      case 'limpeza':
+        return 'limpeza';
+
+      case 'seguranca':
+        return 'coordenacao';
+
+      case 'administrativo':
+        return 'administrativo';
+
+      default:
+        return 'administrativo';
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -579,7 +600,12 @@ void abrirOcorrencia(Map<String, dynamic> item) {
                   style: TextStyle(color: Color(0xff7a7a7a)),
                 ),
                 const SizedBox(height: 24),
-                ...['Em análise', 'Em andamento', 'Finalizado'].map(
+                ...['Aberta', 
+                    'Em análise', 
+                    'Em andamento', 
+                    'Resolvido', 
+                    'Finalizado']
+                .map(
                   (status) => Padding(
                     padding: const EdgeInsets.only(bottom: 12),
                     child: SizedBox(
@@ -777,6 +803,7 @@ Widget _sobreItem(String titulo, String valor) {
     String status = 'Em análise';
     File? imagem;
     double prioridadeValue = 0;
+    String categoria = 'informatica';
 
     showDialog(
       context: context,
@@ -807,6 +834,39 @@ Widget _sobreItem(String titulo, String valor) {
                         controller: descricaoController,
                         maxLines: 5,
                         decoration: inputDecoration('Descrição'),
+                      ),
+                      const SizedBox(height: 18),
+
+                      DropdownButtonFormField<String>(
+                        value: categoria,
+                        decoration: inputDecoration('Categoria'),
+                        items: const [
+                          DropdownMenuItem(
+                            value: 'informatica',
+                            child: Text('Informática'),
+                          ),
+                          DropdownMenuItem(
+                            value: 'estrutura',
+                            child: Text('Estrutura'),
+                          ),
+                          DropdownMenuItem(
+                            value: 'limpeza',
+                            child: Text('Limpeza'),
+                          ),
+                          DropdownMenuItem(
+                            value: 'seguranca',
+                            child: Text('Segurança'),
+                          ),
+                          DropdownMenuItem(
+                            value: 'administrativo',
+                            child: Text('Administrativo'),
+                          ),
+                        ],
+                        onChanged: (value) {
+                          setStateDialog(() {
+                            categoria = value!;
+                          });
+                        },
                       ),
                      
                       const SizedBox(height: 18),
@@ -896,7 +956,9 @@ Widget _sobreItem(String titulo, String valor) {
                                 'imagem': imagem,
                               };
 
-                              widget.ocorrencias.insert(0, newItem);
+                              await FirebaseFirestore.instance
+                              .collection('ocorrencias')
+                              .add(newItem);
                               _searchOcorrencias(pesquisaController.text);
                             });
 
