@@ -163,9 +163,7 @@ Widget infoCard(
 ) {
   return SizedBox(
     width: 220, // aumenta a largura
-    height: 180, // aumenta a altura
-    child: AspectRatio(
-      aspectRatio: 1, // mantém quadrado
+    height: 160, // aumenta a altura
       child: Container(
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
@@ -187,21 +185,23 @@ Widget infoCard(
               textAlign: TextAlign.center,
               style: const TextStyle(
                 color: Color(0xff7a7a7a),
+                fontSize: 12,
               ),
             ),
             const SizedBox(height: 10),
             Text(
               valor,
               textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               style: const TextStyle(
-                fontSize: 16,
+                fontSize: 14,
                 fontWeight: FontWeight.bold,
               ),
             ),
           ],
         ),
       ),
-    ),
   );
 }
 
