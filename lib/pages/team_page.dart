@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-
+import 'package:cloud_firestore/cloud_firestore.dart';
 class TeamPage extends StatefulWidget {
   final bool isAdmin;
   const TeamPage({super.key, required this.isAdmin});
@@ -10,6 +10,163 @@ class TeamPage extends StatefulWidget {
 }
 
 class _TeamPageState extends State<TeamPage> {
+  void _abrirCadastroCategoria() async {
+    print('clicou em categoria');
+
+  final nomeController = TextEditingController();
+
+  final setoresSnapshot = await FirebaseFirestore.instance
+      .collection('setores')
+      .get();
+      
+      print('setores encontrados: ${setoresSnapshot.docs.length}');
+
+  final setores = setoresSnapshot.docs.map((doc) {
+  final data = doc.data();
+
+  final nome = data['nome']?.toString() ?? doc.id;
+  final setor = data['setor']?.toString() ?? doc.id;
+
+  return {
+    'id': doc.id,
+    'nome': nome,
+    'setor': setor,
+  };
+}).where((setor) {
+  return setor['setor']!.isNotEmpty;
+}).toList();
+
+  if (setores.isEmpty) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Cadastre um setor primeiro.')),
+    );
+    return;
+  }
+
+    print('vai abrir modal de categoria');
+    
+  String setorSelecionado = setores.first['setor']!;
+  String setorNomeSelecionado = setores.first['nome']!;
+
+  showModalBottomSheet(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: Colors.transparent,
+    builder: (context) {
+      return StatefulBuilder(
+        builder: (context, setStateModal) {
+          return Container(
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+              top: 24,
+              left: 24,
+              right: 24,
+            ),
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Cadastrar Categoria',
+                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                ),
+
+                const SizedBox(height: 20),
+
+                _inputField(nomeController, 'Nome da categoria. Ex: Informática'),
+
+                const SizedBox(height: 14),
+
+                DropdownButtonFormField<String>(
+                  value: setorSelecionado,
+                  decoration: InputDecoration(
+                    hintText: 'Setor responsável',
+                    filled: true,
+                    fillColor: const Color(0xfff4f5f7),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      borderSide: BorderSide.none,
+                    ),
+                  ),
+                  items: setores.map((setor) {
+                    return DropdownMenuItem<String>(
+                      value: setor['setor']!,
+                      child: Text(setor['nome']!),
+                    );
+                  }).toList(),
+                  onChanged: (value) {
+                    if (value == null) return;
+
+                    final setorEncontrado = setores.firstWhere(
+                      (s) => s['setor'] == value,
+                    );
+
+                    setStateModal(() {
+                      setorSelecionado = value;
+                      setorNomeSelecionado = setorEncontrado['nome']!;
+                    });
+                  },
+                ),
+
+                const SizedBox(height: 24),
+
+                SizedBox(
+                  width: double.infinity,
+                  height: 54,
+                  child: FilledButton(
+                    style: FilledButton.styleFrom(
+                      backgroundColor: const Color(0xffa61d2d),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                    ),
+                    onPressed: () async {
+                      final nome = nomeController.text.trim();
+
+                      if (nome.isEmpty) return;
+
+                      final codigo = nome
+                          .toLowerCase()
+                          .replaceAll(' ', '_')
+                          .replaceAll('á', 'a')
+                          .replaceAll('à', 'a')
+                          .replaceAll('ã', 'a')
+                          .replaceAll('é', 'e')
+                          .replaceAll('ê', 'e')
+                          .replaceAll('í', 'i')
+                          .replaceAll('ó', 'o')
+                          .replaceAll('õ', 'o')
+                          .replaceAll('ú', 'u')
+                          .replaceAll('ç', 'c');
+
+                      await FirebaseFirestore.instance
+                          .collection('categorias')
+                          .doc(codigo)
+                          .set({
+                        'nome': nome,
+                        'setor': setorSelecionado,
+                        'setorNome': setorNomeSelecionado,
+                      });
+
+                      if (context.mounted) {
+                        Navigator.pop(context);
+                      }
+                    },
+                    child: const Text('Salvar Categoria'),
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      );
+    },
+  );
+}
   // Dados mockados dos funcionários
   final List<Map<String, dynamic>> funcionarios = [
     {'nome': 'Ana Silva', 'cargo': 'Técnica', 'email': 'ana@empresa.com'},
@@ -24,6 +181,86 @@ class _TeamPageState extends State<TeamPage> {
     {'mes': 'MAR', 'valor': 20},
     {'mes': 'ABR', 'valor': 35},
   ];
+
+  void _abrirCadastroSetor() {
+  final nomeController = TextEditingController();
+  final codigoController = TextEditingController();
+  final responsavelController = TextEditingController();
+
+  showModalBottomSheet(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: Colors.transparent,
+    builder: (context) {
+      return Container(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+          top: 24,
+          left: 24,
+          right: 24,
+        ),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Cadastrar Setor',
+              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 20),
+
+            _inputField(nomeController, 'Nome do setor. Ex: TI'),
+            const SizedBox(height: 14),
+
+            _inputField(codigoController, 'Código. Ex: ti'),
+            const SizedBox(height: 14),
+
+            _inputField(responsavelController, 'Responsável. Ex: Equipe de TI'),
+            const SizedBox(height: 24),
+
+            SizedBox(
+              width: double.infinity,
+              height: 54,
+              child: FilledButton(
+                style: FilledButton.styleFrom(
+                  backgroundColor: const Color(0xffa61d2d),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                ),
+                onPressed: () async {
+                  final nome = nomeController.text.trim();
+                  final codigo = codigoController.text.trim().toLowerCase();
+                  final responsavel = responsavelController.text.trim();
+
+                  if (nome.isEmpty || codigo.isEmpty) return;
+
+                  await FirebaseFirestore.instance
+                      .collection('setores')
+                      .doc(codigo)
+                      .set({
+                    'nome': nome,
+                    'setor': codigo,
+                    'responsavel': responsavel,
+                  });
+
+                  if (context.mounted) {
+                    Navigator.pop(context);
+                  }
+                },
+                child: const Text('Salvar Setor'),
+              ),
+            ),
+          ],
+        ),
+      );
+    },
+  );
+}
 
   void _abrirMenuCadastro() {
     final nomeController = TextEditingController();
@@ -294,15 +531,46 @@ class _TeamPageState extends State<TeamPage> {
                         ),
                       ),
                       if (widget.isAdmin)
-                        TextButton.icon(
-                          onPressed: _abrirMenuCadastro,
-                          icon: const Icon(Icons.person_add_outlined,
-                              size: 18, color: Color(0xffa61d2d)),
+                      Row(
+                        children: [
+                          TextButton.icon(
+                            onPressed: _abrirCadastroSetor,
+                            icon: const Icon(
+                              Icons.apartment_outlined,
+                              size: 18,
+                              color: Color(0xffa61d2d),
+                            ),
+                            label: const Text(
+                              'Setor',
+                              style: TextStyle(color: Color(0xffa61d2d)),
+                            ),
+                          ),
+                          TextButton.icon(
+                          onPressed: _abrirCadastroCategoria,
+                          icon: const Icon(
+                            Icons.category_outlined,
+                            size: 18,
+                            color: Color(0xffa61d2d),
+                          ),
                           label: const Text(
-                            'Adicionar',
+                            'Categoria',
                             style: TextStyle(color: Color(0xffa61d2d)),
                           ),
                         ),
+                          TextButton.icon(
+                            onPressed: _abrirMenuCadastro,
+                            icon: const Icon(
+                              Icons.person_add_outlined,
+                              size: 18,
+                              color: Color(0xffa61d2d),
+                            ),
+                            label: const Text(
+                              'Funcionário',
+                              style: TextStyle(color: Color(0xffa61d2d)),
+                            ),
+                          ),
+                        ],
+                      ),
                     ],
                   ),
                   const SizedBox(height: 12),

@@ -1,16 +1,16 @@
 import 'dart:io';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
-import 'package:file_picker/file_picker.dart';
-import 'pages/team_page.dart';
+import 'firebase_options.dart';
+import 'pages/iniciar_page.dart';
 import 'pages/profile_page.dart';
 import 'pages/search_page.dart';
-import 'pages/iniciar_page.dart';
-import 'package:firebase_core/firebase_core.dart';
-import 'firebase_options.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'pages/team_page.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -39,6 +39,27 @@ class ReportPlusApp extends StatelessWidget {
   }
 }
 
+InputDecoration inputDecoration(String hint) {
+  return InputDecoration(
+    hintText: hint,
+    filled: true,
+    fillColor: Colors.white,
+    contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+    border: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(18),
+      borderSide: const BorderSide(color: Color(0xffe8e8e8)),
+    ),
+    enabledBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(18),
+      borderSide: const BorderSide(color: Color(0xffe8e8e8)),
+    ),
+    focusedBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(18),
+      borderSide: const BorderSide(color: Color(0xffa61d2d)),
+    ),
+  );
+}
+
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
 
@@ -59,29 +80,43 @@ class _LoginPageState extends State<LoginPage> {
     });
 
     try {
-      // faz login no Firebase Auth
       await FirebaseAuth.instance.signInWithEmailAndPassword(
         email: emailController.text.trim(),
         password: senhaController.text.trim(),
       );
 
-      // busca o tipo do usuário no Firestore
       final doc = await FirebaseFirestore.instance
           .collection('usuarios')
           .where('email', isEqualTo: emailController.text.trim())
           .get();
 
-      final tipo = doc.docs.first.data()['tipo'] as String;
+      if (doc.docs.isEmpty) {
+        setState(() => _erro = 'Usuário sem cadastro no Firestore.');
+        return;
+      }
+
+      final userData = doc.docs.first.data();
+      final tipo = userData['tipo'] as String? ?? 'funcionario';
       final isAdmin = tipo == 'admin';
+      final setor = (userData['setor'] as String? ?? '')
+        .trim()
+        .toLowerCase();
+
+      print('SETOR DO USUARIO: $setor');
+
 
       if (mounted) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (_) => MainScreen(isAdmin: isAdmin),
-          ),
-        );
-      }
+  Navigator.pushReplacement(
+    context,
+    MaterialPageRoute(
+      builder: (_) => MainScreen(
+        isAdmin: isAdmin,
+        setor: setor,
+      ),
+    ),
+  );
+}
+      
     } on FirebaseAuthException catch (e) {
       setState(() {
         _erro = e.code == 'user-not-found'
@@ -91,7 +126,9 @@ class _LoginPageState extends State<LoginPage> {
                 : 'Erro ao fazer login. Tente novamente.';
       });
     } finally {
-      setState(() => _carregando = false);
+      if (mounted) {
+        setState(() => _carregando = false);
+      }
     }
   }
 
@@ -171,8 +208,15 @@ class _LoginPageState extends State<LoginPage> {
 
 class DashboardPage extends StatefulWidget {
   final bool isAdmin;
+  final String setor;
   final List<Map<String, dynamic>> ocorrencias;
-  const DashboardPage({super.key, required this.isAdmin, required this.ocorrencias});
+
+  const DashboardPage({
+    super.key,
+    required this.isAdmin,
+    required this.setor,
+    required this.ocorrencias,
+  });
 
   @override
   State<DashboardPage> createState() => _DashboardPageState();
@@ -181,28 +225,7 @@ class DashboardPage extends StatefulWidget {
 class _DashboardPageState extends State<DashboardPage> {
   final pesquisaController = TextEditingController();
   late List<Map<String, dynamic>> filteredOcorrencias;
-
-  String obterSetor(String categoria) {
-    switch (categoria) {
-      case 'informatica':
-        return 'ti';
-
-      case 'estrutura':
-        return 'manutencao';
-
-      case 'limpeza':
-        return 'limpeza';
-
-      case 'seguranca':
-        return 'coordenacao';
-
-      case 'administrativo':
-        return 'administrativo';
-
-      default:
-        return 'administrativo';
-    }
-  }
+  List<Map<String, dynamic>> categoriasFirebase = [];
 
   @override
   void initState() {
@@ -210,13 +233,24 @@ class _DashboardPageState extends State<DashboardPage> {
     filteredOcorrencias = List.from(widget.ocorrencias);
   }
 
-   @override
+  @override
   void dispose() {
     pesquisaController.dispose();
     super.dispose();
   }
 
-  String _prioridadeTexto(double value) {   // ← adiciona aqui
+  Future<void> carregarCategorias() async {
+    final snapshot = await FirebaseFirestore.instance.collection('categorias').get();
+
+    categoriasFirebase = snapshot.docs.map((doc) {
+      return {
+        'id': doc.id,
+        ...doc.data(),
+      };
+    }).toList();
+  }
+
+  String _prioridadeTexto(double value) {
     if (value < 0.5) return 'Baixa';
     if (value < 1.5) return 'Média';
     return 'Alta';
@@ -239,117 +273,108 @@ class _DashboardPageState extends State<DashboardPage> {
     });
   }
 
- @override
+  @override
   Widget build(BuildContext context) {
-  final width = MediaQuery.of(context).size.width;
-  final isDesktop = width >= 1100;
-  final isTablet = width >= 700 && width < 1100;
+    final width = MediaQuery.of(context).size.width;
+    final isDesktop = width >= 1100;
+    final isTablet = width >= 700 && width < 1100;
 
     return Stack(
-      children:[
+      children: [
         SafeArea(
           child: Center(
-            child: ConstrainedBox(   
+            child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 1500),
               child: Padding(
                 padding: const EdgeInsets.all(24),
                 child: Column(
-                 children: [
-        Row(
-           children: [
-           Text(
-             'Report+',
-             style: GoogleFonts.inter(
-               fontSize: 28,
-               fontWeight: FontWeight.bold,
-               color: const Color(0xffa61d2d),
-             ),
-           ),
-            const Spacer(),
-            Container(
-            decoration: BoxDecoration(
-             color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-      ),
-            child: IconButton(
-             onPressed: _abrirSobre,   
-            icon: const Icon(Icons.info_outline),
-      ),
-    ),
-            const SizedBox(width: 8),
-           Container(
-           decoration: BoxDecoration(
-           color: Colors.white,
-           borderRadius: BorderRadius.circular(16),
-      ),
-    ),
-  ],
-),
-                  const SizedBox(height: 20),
-                  TextField(
-                    controller: pesquisaController,
-                    onChanged: _searchOcorrencias,
-                    decoration: inputDecoration('Pesquisar ocorrência...')
-                        .copyWith(
-                          prefixIcon: IconButton(
-                            onPressed: () =>
-                                _searchOcorrencias(pesquisaController.text),
-                            icon: const Icon(Icons.search),
+                  children: [
+                    Row(
+                      children: [
+                        Text(
+                          'Report+',
+                          style: GoogleFonts.inter(
+                            fontSize: 28,
+                            fontWeight: FontWeight.bold,
+                            color: const Color(0xffa61d2d),
                           ),
                         ),
-                  ),
-                  const SizedBox(height: 24),
-
-                  if (isDesktop)
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(flex: 2, child: buildCardsGrid(4)),
-                        const SizedBox(width: 16),
-                        Expanded(flex: 3, child: buildLista()),
+                        const Spacer(),
+                        Container(
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: IconButton(
+                            onPressed: _abrirSobre,
+                            icon: const Icon(Icons.info_outline),
+                          ),
+                        ),
                       ],
-                    )
-                  else if (isTablet)
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(child: buildCardsGrid(2)),
-                          const SizedBox(height: 16),
-                          Expanded(child: buildLista()),
-                        ],
-                      ),
-                    )
-                  else
-                    Expanded(
-                      child: Column(
-                        children: [
-                          buildCardsGrid(2),
-                          const SizedBox(height: 16),
-                          Expanded(child: buildLista()),
-                        ],
+                    ),
+                    const SizedBox(height: 20),
+                    TextField(
+                      controller: pesquisaController,
+                      onChanged: _searchOcorrencias,
+                      decoration: inputDecoration('Pesquisar ocorrência...').copyWith(
+                        prefixIcon: IconButton(
+                          onPressed: () => _searchOcorrencias(pesquisaController.text),
+                          icon: const Icon(Icons.search),
+                        ),
                       ),
                     ),
-                ],
+                    const SizedBox(height: 24),
+                    if (isDesktop)
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(flex: 2, child: buildCardsGrid(4)),
+                          const SizedBox(width: 16),
+                          Expanded(flex: 3, child: buildLista()),
+                        ],
+                      )
+                    else if (isTablet)
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(child: buildCardsGrid(2)),
+                            const SizedBox(height: 16),
+                            Expanded(child: buildLista()),
+                          ],
+                        ),
+                      )
+                    else
+                      Expanded(
+                        child: Column(
+                          children: [
+                            buildCardsGrid(2),
+                            const SizedBox(height: 16),
+                            Expanded(child: buildLista()),
+                          ],
+                        ),
+                      ),
+                  ],
+                ),
               ),
             ),
           ),
         ),
-      ),
-    if (!widget.isAdmin)
-      Positioned(
-        bottom: 16,
-        right: 16,
-        child: FloatingActionButton(
-          backgroundColor: const Color(0xffa61d2d),
-          onPressed: criarOcorrencia,
-          child: const Icon(Icons.add),
-        ),
-      ),
-      ],   
-    );                  
+        if (!widget.isAdmin)
+          Positioned(
+            bottom: 16,
+            right: 16,
+            child: FloatingActionButton(
+              backgroundColor: const Color(0xffa61d2d),
+              onPressed: criarOcorrencia,
+              child: const Icon(Icons.add),
+            ),
+          ),
+      ],
+    );
   }
-              Widget buildCardsGrid(int crossAxisCount) {
+
+  Widget buildCardsGrid(int crossAxisCount) {
     final width = MediaQuery.of(context).size.width;
     final aspectRatio = width < 400 ? 1.0 : width < 700 ? 1.4 : 1.8;
 
@@ -361,10 +386,19 @@ class _DashboardPageState extends State<DashboardPage> {
       mainAxisSpacing: 16,
       childAspectRatio: aspectRatio,
       children: [
-        estatisticaCard('Ocorrências', '24'),
-        estatisticaCard('Alta Prioridade', '8'),
-        estatisticaCard('Em Andamento', '11'),
-        estatisticaCard('Finalizadas', '13'),
+        estatisticaCard('Ocorrências', widget.ocorrencias.length.toString()),
+        estatisticaCard(
+          'Alta Prioridade',
+          widget.ocorrencias.where((e) => e['prioridade'] == 'Alta').length.toString(),
+        ),
+        estatisticaCard(
+          'Em Andamento',
+          widget.ocorrencias.where((e) => e['status'] == 'Em andamento').length.toString(),
+        ),
+        estatisticaCard(
+          'Finalizadas',
+          widget.ocorrencias.where((e) => e['status'] == 'Finalizado').length.toString(),
+        ),
       ],
     );
   }
@@ -409,15 +443,16 @@ class _DashboardPageState extends State<DashboardPage> {
           ),
           const SizedBox(height: 20),
           Expanded(
-            child: ListView.separated(
-              itemCount: filteredOcorrencias.length,
-              separatorBuilder: (context, index) => const SizedBox(height: 14),
-              itemBuilder: (context, index) {
-                final item = filteredOcorrencias[index];
-
-                return occurrenceCard(item);
-              },
-            ),
+            child: filteredOcorrencias.isEmpty
+                ? const Center(child: Text('Nenhuma ocorrência encontrada.'))
+                : ListView.separated(
+                    itemCount: filteredOcorrencias.length,
+                    separatorBuilder: (context, index) => const SizedBox(height: 14),
+                    itemBuilder: (context, index) {
+                      final item = filteredOcorrencias[index];
+                      return occurrenceCard(item);
+                    },
+                  ),
           ),
         ],
       ),
@@ -427,13 +462,13 @@ class _DashboardPageState extends State<DashboardPage> {
   Widget occurrenceCard(Map<String, dynamic> item) {
     return InkWell(
       borderRadius: BorderRadius.circular(24),
-      onTap: () { 
+      onTap: () {
         if (widget.isAdmin) {
-       atualizarAndamento(item);
+          atualizarAndamento(item);
         } else {
-       abrirOcorrencia(item);
+          abrirOcorrencia(item);
         }
-      }, 
+      },
       child: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
@@ -443,55 +478,48 @@ class _DashboardPageState extends State<DashboardPage> {
         child: Row(
           children: [
             if (item['imagem'] != null || item['imagemUrl'] != null)
-            Container(
-              width: 90,
-              height: 90,
-              margin: const EdgeInsets.only(right: 16),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(20),
-                color: Colors.grey.shade200,
+              Container(
+                width: 90,
+                height: 90,
+                margin: const EdgeInsets.only(right: 16),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(20),
+                  color: Colors.grey.shade200,
+                ),
+                clipBehavior: Clip.hardEdge,
+                child: item['imagem'] != null
+                    ? Image.file(
+                        item['imagem'] as File,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => const Icon(Icons.broken_image, color: Colors.grey),
+                      )
+                    : Image.network(
+                        item['imagemUrl'] as String,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => const Icon(Icons.broken_image, color: Colors.grey),
+                      ),
               ),
-              clipBehavior: Clip.hardEdge,
-              child: item['imagem'] != null
-                  ? Image.file(
-                      item['imagem'] as File,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) =>
-                          const Icon(Icons.broken_image, color: Colors.grey),
-                    )
-                  : Image.network(
-                      item['imagemUrl'] as String,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) =>
-                          const Icon(Icons.broken_image, color: Colors.grey),
-                    ),
-            ),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    item['titulo'],
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    item['titulo']?.toString() ?? '',
+                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    item['local'],
+                    item['local']?.toString() ?? '',
                     style: const TextStyle(color: Color(0xff7a7a7a)),
                   ),
                   const SizedBox(height: 8),
-                  Text('${item['status']} • ${item['prioridade']}'),
+                  Text('${item['status'] ?? ''} • ${item['prioridade'] ?? ''}'),
                 ],
               ),
             ),
             const SizedBox(width: 16),
             FilledButton(
-              style: FilledButton.styleFrom(
-                backgroundColor: const Color(0xffa61d2d),
-              ),
+              style: FilledButton.styleFrom(backgroundColor: const Color(0xffa61d2d)),
               onPressed: () => abrirOcorrencia(item),
               child: const Text('Abrir'),
             ),
@@ -501,85 +529,54 @@ class _DashboardPageState extends State<DashboardPage> {
     );
   }
 
-void abrirOcorrencia(Map<String, dynamic> item) {
-  showDialog(
-    context: context,
-    builder: (context) {
-      return Dialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(28),
-        ),
-        child: Container(
-          width: 600,
-          padding: const EdgeInsets.all(28),
-          child: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  item['titulo'],
-                  style: const TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
+  void abrirOcorrencia(Map<String, dynamic> item) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+          child: Container(
+            width: 600,
+            padding: const EdgeInsets.all(28),
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    item['titulo']?.toString() ?? '',
+                    style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
                   ),
-                ),
-                const SizedBox(height: 24),
-                buildInfoField('Local', item['local']),
-                buildInfoField('Descrição', item['descricao']),
-                buildInfoField('Status', item['status']),
-                buildInfoField('Prioridade', item['prioridade']),
-                buildInfoField('Data', item['data']),
-                const SizedBox(height: 24),
-                if (item['imagem'] != null || item['imagemUrl'] != null)
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(20),
-                    child: item['imagem'] != null
-                        ? Image.file(
-                            item['imagem'] as File,
-                            width: double.infinity,
-                            height: 220,
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) =>
-                                const Icon(Icons.broken_image, color: Colors.grey),
-                          )
-                        : Image.network(
-                            item['imagemUrl'] as String,
-                            width: double.infinity,
-                            height: 220,
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) =>
-                                const Icon(Icons.broken_image, color: Colors.grey),
-                          ),
-                  ),
-                const SizedBox(height: 24),
-                SizedBox(
-                  width: double.infinity,
-                  height: 54,
-                  child: FilledButton(
-                    style: FilledButton.styleFrom(
-                      backgroundColor: const Color(0xffa61d2d),
+                  const SizedBox(height: 24),
+                  buildInfoField('Local', item['local']?.toString() ?? ''),
+                  buildInfoField('Descrição', item['descricao']?.toString() ?? ''),
+                  buildInfoField('Status', item['status']?.toString() ?? ''),
+                  buildInfoField('Prioridade', item['prioridade']?.toString() ?? ''),
+                  buildInfoField('Data', item['data']?.toString() ?? ''),
+                  const SizedBox(height: 24),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 54,
+                    child: FilledButton(
+                      style: FilledButton.styleFrom(backgroundColor: const Color(0xffa61d2d)),
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('Fechar'),
                     ),
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text('Salvar Alterações'),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
-        ),
-      );
-    },
-  );
-}
+        );
+      },
+    );
+  }
 
   void atualizarAndamento(Map<String, dynamic> item) {
     showDialog(
       context: context,
       builder: (context) {
         return Dialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(28),
-          ),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
           child: Container(
             width: 400,
             padding: const EdgeInsets.all(28),
@@ -588,24 +585,13 @@ void abrirOcorrencia(Map<String, dynamic> item) {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  item['titulo'],
-                  style: const TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  item['titulo']?.toString() ?? '',
+                  style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 8),
-                const Text(
-                  'Atualizar andamento',
-                  style: TextStyle(color: Color(0xff7a7a7a)),
-                ),
+                const Text('Atualizar andamento', style: TextStyle(color: Color(0xff7a7a7a))),
                 const SizedBox(height: 24),
-                ...['Aberta', 
-                    'Em análise', 
-                    'Em andamento', 
-                    'Resolvido', 
-                    'Finalizado']
-                .map(
+                ...['Aberta', 'Em análise', 'Em andamento', 'Resolvido', 'Finalizado'].map(
                   (status) => Padding(
                     padding: const EdgeInsets.only(bottom: 12),
                     child: SizedBox(
@@ -613,23 +599,26 @@ void abrirOcorrencia(Map<String, dynamic> item) {
                       height: 52,
                       child: OutlinedButton(
                         style: OutlinedButton.styleFrom(
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16),
-                          ),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                           side: BorderSide(
-                            color: item['status'] == status
-                                ? const Color(0xffa61d2d)
-                                : const Color(0xffe8e8e8),
+                            color: item['status'] == status ? const Color(0xffa61d2d) : const Color(0xffe8e8e8),
                           ),
-                          foregroundColor: item['status'] == status
-                              ? const Color(0xffa61d2d)
-                              : Colors.black,
+                          foregroundColor: item['status'] == status ? const Color(0xffa61d2d) : Colors.black,
                         ),
-                        onPressed: () {
-                          setState(() {
-                            item['status'] = status;
-                          });
-                          Navigator.pop(context);
+                        onPressed: () async {
+                          await FirebaseFirestore.instance
+                              .collection('ocorrencias')
+                              .doc(item['id'])
+                              .update({'status': status});
+
+                          if (mounted) {
+                            setState(() {
+                              item['status'] = status;
+                              _searchOcorrencias(pesquisaController.text);
+                            });
+                          }
+
+                          if (context.mounted) Navigator.pop(context);
                         },
                         child: Text(status),
                       ),
@@ -643,139 +632,6 @@ void abrirOcorrencia(Map<String, dynamic> item) {
       },
     );
   }
-void _abrirSobre() {
-  showDialog(
-    context: context,
-    builder: (context) {
-      return Dialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(28),
-        ),
-        child: Container(
-          width: 480,
-          padding: const EdgeInsets.all(32),
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Center(
-                  child: Text(
-                    'Report+',
-                    style: GoogleFonts.inter(
-                      fontSize: 32,
-                      fontWeight: FontWeight.bold,
-                      color: const Color(0xffa61d2d),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 4),
-                const Center(
-                  child: Text(
-                    'Sistema de reporte de problemas',
-                    style: TextStyle(color: Color(0xff7a7a7a)),
-                  ),
-                ),
-                const SizedBox(height: 20),
-                const Divider(),
-                const SizedBox(height: 12),
-
-                _sobreItem('Disciplina', 'Desenvolvimento de Software'),
-                _sobreItem('Programa', 'Fábrica de Softwares'),
-                const SizedBox(height: 8),
-
-                _sobreItem('Professores Responsáveis',
-                    'Prof. Dr. Elvio Gilberto da Silva\nProf. Me. Luis Felipe Grael Tinós\nProfessora Esp. Camila Floret Pelizon'),
-                const SizedBox(height: 8),
-
-                _sobreItem('Grupo 14',
-                    'Bruno Mansano dos Passos\nDiego Costanzo Galvão\nIsabela Eugênia Teixeira Ferraz de Oliveira\nJoão Igor Alves Oros Reis\nLucas Augusto Martins\n\nCiência da Computação (CC)'),
-                const SizedBox(height: 8),
-
-                _sobreItem('Sobre o App',
-                    'Aplicativo desenvolvido para facilitar o reporte de problemas na empresa, promovendo uma comunicação colaborativa entre funcionários e administradores.'),
-
-                const Divider(height: 32),
-
-                // Logos
-               const Divider(height: 32),
-
-                  const Text(
-                    'Desenvolvimento:',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xff7a7a7a),
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  Image.asset(
-                    'assets/unisagrado.png',
-                    height: 120,
-                    fit: BoxFit.contain,
-                  ),
-                  const SizedBox(height: 20),
-                  const Text(
-                    'Apoio:',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xff7a7a7a),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Image.asset(
-                    'assets/coordenadoria_de_extensao.png',
-                    height: 90,
-                    fit: BoxFit.contain,
-                  ),
-                const SizedBox(height: 24),
-                SizedBox(
-                  width: double.infinity,
-                  height: 50,
-                  child: FilledButton(
-                    style: FilledButton.styleFrom(
-                      backgroundColor: const Color(0xffa61d2d),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                    ),
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text('Fechar'),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      );
-    },
-  );
-}
-
-Widget _sobreItem(String titulo, String valor) {
-  return Padding(
-    padding: const EdgeInsets.only(bottom: 12),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          titulo,
-          style: const TextStyle(
-            fontWeight: FontWeight.bold,
-            color: Color(0xff7a7a7a),
-            fontSize: 13,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          valor,
-          style: const TextStyle(fontSize: 16),
-        ),
-      ],
-    ),
-  );
-}
 
   Widget buildInfoField(String title, String value) {
     return Padding(
@@ -789,13 +645,24 @@ Widget _sobreItem(String titulo, String valor) {
             controller: TextEditingController(text: value),
             maxLines: 3,
             decoration: inputDecoration(''),
+            readOnly: true,
           ),
         ],
       ),
     );
   }
 
-  void criarOcorrencia() {
+  Future<void> criarOcorrencia() async {
+    await carregarCategorias();
+
+    if (categoriasFirebase.isEmpty) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Nenhuma categoria cadastrada no Firebase.')),
+      );
+      return;
+    }
+
     final tituloController = TextEditingController();
     final localController = TextEditingController();
     final descricaoController = TextEditingController();
@@ -803,7 +670,7 @@ Widget _sobreItem(String titulo, String valor) {
     String status = 'Em análise';
     File? imagem;
     double prioridadeValue = 0;
-    String categoria = 'informatica';
+    String categoria = categoriasFirebase.first['id'].toString();
 
     showDialog(
       context: context,
@@ -811,9 +678,7 @@ Widget _sobreItem(String titulo, String valor) {
         return StatefulBuilder(
           builder: (context, setStateDialog) {
             return Dialog(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(28),
-              ),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
               child: Container(
                 width: 700,
                 padding: const EdgeInsets.all(28),
@@ -836,41 +701,24 @@ Widget _sobreItem(String titulo, String valor) {
                         decoration: inputDecoration('Descrição'),
                       ),
                       const SizedBox(height: 18),
-
                       DropdownButtonFormField<String>(
                         value: categoria,
                         decoration: inputDecoration('Categoria'),
-                        items: const [
-                          DropdownMenuItem(
-                            value: 'informatica',
-                            child: Text('Informática'),
-                          ),
-                          DropdownMenuItem(
-                            value: 'estrutura',
-                            child: Text('Estrutura'),
-                          ),
-                          DropdownMenuItem(
-                            value: 'limpeza',
-                            child: Text('Limpeza'),
-                          ),
-                          DropdownMenuItem(
-                            value: 'seguranca',
-                            child: Text('Segurança'),
-                          ),
-                          DropdownMenuItem(
-                            value: 'administrativo',
-                            child: Text('Administrativo'),
-                          ),
-                        ],
+                        items: categoriasFirebase.map((cat) {
+                          return DropdownMenuItem<String>(
+                            value: cat['id'].toString(),
+                            child: Text(cat['nome'].toString()),
+                          );
+                        }).toList(),
                         onChanged: (value) {
+                          if (value == null) return;
                           setStateDialog(() {
-                            categoria = value!;
+                            categoria = value;
                           });
                         },
                       ),
-                     
                       const SizedBox(height: 18),
-                     Align(
+                      Align(
                         alignment: Alignment.centerLeft,
                         child: Text(
                           'Prioridade: ${_prioridadeTexto(prioridadeValue)}',
@@ -890,13 +738,9 @@ Widget _sobreItem(String titulo, String valor) {
                           });
                         },
                       ),
-                      Row(
+                      const Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: const [
-                          Text('Baixa'),
-                          Text('Média'),
-                          Text('Alta'),
-                        ],
+                        children: [Text('Baixa'), Text('Média'), Text('Alta')],
                       ),
                       const SizedBox(height: 18),
                       SizedBox(
@@ -904,10 +748,7 @@ Widget _sobreItem(String titulo, String valor) {
                         height: 54,
                         child: OutlinedButton.icon(
                           onPressed: () async {
-                            final result = await FilePicker.platform.pickFiles(
-                              type: FileType.image,
-                            );
-
+                            final result = await FilePicker.platform.pickFiles(type: FileType.image);
                             if (result != null && result.files.single.path != null) {
                               setStateDialog(() {
                                 imagem = File(result.files.single.path!);
@@ -916,9 +757,7 @@ Widget _sobreItem(String titulo, String valor) {
                           },
                           icon: const Icon(Icons.image_outlined),
                           label: Text(
-                            imagem == null
-                                ? 'Importar imagem'
-                                : imagem!.path.split(Platform.pathSeparator).last,
+                            imagem == null ? 'Importar imagem' : imagem!.path.split(Platform.pathSeparator).last,
                           ),
                         ),
                       ),
@@ -939,31 +778,47 @@ Widget _sobreItem(String titulo, String valor) {
                         width: double.infinity,
                         height: 56,
                         child: FilledButton(
-                          style: FilledButton.styleFrom(
-                            backgroundColor: const Color(0xffa61d2d),
-                          ),
+                          style: FilledButton.styleFrom(backgroundColor: const Color(0xffa61d2d)),
                           onPressed: () async {
-                              final newItem = {
-                                'titulo': tituloController.text,
-                                'local': localController.text,
-                                'descricao': descricaoController.text,
-                                'status': status,
-                                'prioridade': _prioridadeTexto(prioridadeValue),
-                                'data': DateFormat(
-                                  'dd/MM/yyyy',
-                                ).format(DateTime.now()),
-                                'imagem': imagem,
-                              };
+                            final categoriaSelecionada = categoriasFirebase.firstWhere(
+                              (c) => c['id'].toString() == categoria,
+                            );
 
-                              await FirebaseFirestore.instance
+                            final newItem = {
+                              'titulo': tituloController.text.trim(),
+                              'local': localController.text.trim(),
+                              'descricao': descricaoController.text.trim(),
+                              'categoria': categoriaSelecionada['nome'],
+                              'setor': categoriaSelecionada['setor'],
+                              'status': status,
+                              'prioridade': _prioridadeTexto(prioridadeValue),
+                              'data': DateFormat('dd/MM/yyyy').format(DateTime.now()),
+                              'imagem': null,
+                            };
+                            final docRef = await FirebaseFirestore.instance
                                 .collection('ocorrencias')
                                 .add(newItem);
-                              
-                              setState(() {
-                                _searchOcorrencias(pesquisaController.text);
-                              });
 
-                            Navigator.pop(context);
+                            final itemComId = {
+                              'id': docRef.id,
+                              ...newItem,
+                            };
+
+                            if (!mounted) return;
+
+                             setState(() {
+                              if (widget.isAdmin || itemComId['setor'] == widget.setor) {
+                                widget.ocorrencias.add(itemComId);
+                              }
+
+                              filteredOcorrencias = List.from(widget.ocorrencias);
+                            });
+
+                            Future.delayed(const Duration(milliseconds: 100), () {
+                              if (context.mounted) {
+                                Navigator.of(context).pop();
+                              }
+                            });
                           },
                           child: const Text('Criar Ocorrência'),
                         ),
@@ -978,31 +833,105 @@ Widget _sobreItem(String titulo, String valor) {
       },
     );
   }
+
+  void _abrirSobre() {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+          child: Container(
+            width: 480,
+            padding: const EdgeInsets.all(32),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Text(
+                      'Report+',
+                      style: GoogleFonts.inter(
+                        fontSize: 32,
+                        fontWeight: FontWeight.bold,
+                        color: const Color(0xffa61d2d),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  const Center(
+                    child: Text('Sistema de reporte de problemas', style: TextStyle(color: Color(0xff7a7a7a))),
+                  ),
+                  const SizedBox(height: 20),
+                  const Divider(),
+                  const SizedBox(height: 12),
+                  _sobreItem('Disciplina', 'Desenvolvimento de Software'),
+                  _sobreItem('Programa', 'Fábrica de Softwares'),
+                  _sobreItem(
+                    'Professores Responsáveis',
+                    'Prof. Dr. Elvio Gilberto da Silva\nProf. Me. Luis Felipe Grael Tinós\nProfessora Esp. Camila Floret Pelizon',
+                  ),
+                  _sobreItem(
+                    'Grupo 14',
+                    'Bruno Mansano dos Passos\nDiego Costanzo Galvão\nIsabela Eugênia Teixeira Ferraz de Oliveira\nJoão Igor Alves Oros Reis\nLucas Augusto Martins\n\nCiência da Computação (CC)',
+                  ),
+                  _sobreItem(
+                    'Sobre o App',
+                    'Aplicativo desenvolvido para facilitar o reporte de problemas na empresa, promovendo uma comunicação colaborativa entre funcionários e administradores.',
+                  ),
+                  const SizedBox(height: 24),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 50,
+                    child: FilledButton(
+                      style: FilledButton.styleFrom(
+                        backgroundColor: const Color(0xffa61d2d),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      ),
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('Fechar'),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _sobreItem(String titulo, String valor) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            titulo,
+            style: const TextStyle(
+              fontWeight: FontWeight.bold,
+              color: Color(0xff7a7a7a),
+              fontSize: 13,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(valor, style: const TextStyle(fontSize: 16)),
+        ],
+      ),
+    );
+  }
 }
 
-InputDecoration inputDecoration(String hint) {
-  return InputDecoration(
-    hintText: hint,
-    filled: true,
-    fillColor: Colors.white,
-    contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
-    border: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(18),
-      borderSide: const BorderSide(color: Color(0xffe8e8e8)),
-    ),
-    enabledBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(18),
-      borderSide: const BorderSide(color: Color(0xffe8e8e8)),
-    ),
-    focusedBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(18),
-      borderSide: const BorderSide(color: Color(0xffa61d2d)),
-    ),
-  );
-}
 class MainScreen extends StatefulWidget {
-  const MainScreen({super.key, required this.isAdmin});
+  const MainScreen({
+    super.key,
+    required this.isAdmin,
+    required this.setor,
+  });
+
   final bool isAdmin;
+  final String setor;
 
   @override
   State<MainScreen> createState() => _MainScreenState();
@@ -1010,44 +939,62 @@ class MainScreen extends StatefulWidget {
 
 class _MainScreenState extends State<MainScreen> {
   int _currentIndex = 0;
+  List<Widget> _pages = [];
+  List<Map<String, dynamic>> ocorrencias = [];
 
-  late List<Widget> _pages;
-   final List<Map<String, dynamic>> ocorrencias = [
-    {
-      'titulo': 'Servidor Offline',
-      'local': 'Datacenter Principal',
-      'status': 'Em andamento',
-      'prioridade': 'Alta',
-      'descricao': 'Servidor principal sem comunicação.',
-      'data': '18/05/2026',
-      'imagem': null,
-      'imagemUrl': 'https://images.unsplash.com/photo-1558494949-ef010cbdcc31?w=400',
-    },
-    {
-      'titulo': 'Câmera com Falha',
-      'local': 'Entrada Norte',
-      'status': 'Em análise',
-      'prioridade': 'Intermediária',
-      'descricao': 'Imagem travando.',
-      'data': '17/05/2026',
-      'imagem': null,
-      'imagemUrl': 'https://images.unsplash.com/photo-1557597774-9d273605dfa9?w=400',
-    },
-    
-  ];
   @override
-void initState() {
-  super.initState();
-  _pages = [
-    DashboardPage(isAdmin: widget.isAdmin, ocorrencias: ocorrencias),
-    SearchPage(ocorrencias: ocorrencias),
-    TeamPage(isAdmin: widget.isAdmin),
-    ProfilePage(isAdmin: widget.isAdmin),
-  ];
-}
+  void initState() {
+    super.initState();
+    inicializar();
+  }
+    Future<void> carregarOcorrencias() async {
+      Query<Map<String, dynamic>> query =
+          FirebaseFirestore.instance.collection('ocorrencias');
+          print('BUSCANDO OCORRENCIAS DO SETOR: ${widget.setor}');
+
+
+      if (!widget.isAdmin) {
+        query = query.where('setor', isEqualTo: widget.setor);
+      }
+
+      final snapshot = await query.get();
+       print('OCORRENCIAS ENCONTRADAS: ${snapshot.docs.length}');
+
+      ocorrencias = snapshot.docs.map((doc) {
+        return {
+          'id': doc.id,
+          ...doc.data(),
+        };
+      }).toList();
+    }
+
+  Future<void> inicializar() async {
+    await carregarOcorrencias();
+
+    if (!mounted) return;
+
+    setState(() {
+      _pages = [
+        DashboardPage(
+          isAdmin: widget.isAdmin,
+          setor: widget.setor,
+          ocorrencias: ocorrencias,
+        ),
+        SearchPage(ocorrencias: ocorrencias),
+        TeamPage(isAdmin: widget.isAdmin),
+        ProfilePage(isAdmin: widget.isAdmin),
+      ];
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
+    if (_pages.isEmpty) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
     return Scaffold(
       body: _pages[_currentIndex],
       bottomNavigationBar: BottomNavigationBar(
