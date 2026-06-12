@@ -73,6 +73,39 @@ class _LoginPageState extends State<LoginPage> {
   bool _carregando = false;
   String? _erro;
 
+  Future<void> _recuperarSenha() async {
+  final email = emailController.text.trim();
+
+  if (email.isEmpty) {
+    setState(() {
+      _erro = 'Digite seu e-mail para recuperar a senha.';
+    });
+    return;
+  }
+
+  try {
+    await FirebaseAuth.instance.sendPasswordResetEmail(
+      email: email,
+    );
+
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          'E-mail de recuperação enviado.',
+        ),
+      ),
+    );
+  } on FirebaseAuthException catch (e) {
+    setState(() {
+      _erro = e.code == 'user-not-found'
+          ? 'Usuário não encontrado.'
+          : 'Erro ao enviar e-mail.';
+    });
+  }
+}
+
   Future<void> _login() async {
     setState(() {
       _carregando = true;
@@ -172,6 +205,18 @@ class _LoginPageState extends State<LoginPage> {
                   controller: senhaController,
                   obscureText: true,
                   decoration: inputDecoration('Senha'),
+                ),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton(
+                    onPressed: _recuperarSenha,
+                    child: const Text(
+                      'Esqueci minha senha',
+                      style: TextStyle(
+                        color: Color(0xffa61d2d),
+                      ),
+                    ),
+                  ),
                 ),
                 if (_erro != null) ...[
                   const SizedBox(height: 12),
