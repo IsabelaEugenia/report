@@ -6,11 +6,33 @@ import '../main.dart';
 
 class ProfilePage extends StatelessWidget {
   final bool isAdmin;
-  const ProfilePage({super.key, required this.isAdmin});
+  final String setor;
+  final String nome;
+  final String email;
+  final String cargo;
+  final String setorNome;
+  final List<Map<String, dynamic>>? ocorrencias;
 
-@override
-Widget build(BuildContext context) {
-  return SafeArea(
+  const ProfilePage({
+    super.key,
+    required this.isAdmin,
+    required this.setor,
+    required this.nome,
+    required this.email,
+    required this.cargo,
+    required this.setorNome,
+    required this.ocorrencias,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final listaOcorrencias = ocorrencias ?? [];
+
+    final quantidadeOcorrencias = isAdmin
+        ? listaOcorrencias.length
+        : listaOcorrencias.where((o) => o['setor'] == setor).length;
+
+    return SafeArea(
     child: Center(
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
@@ -46,7 +68,7 @@ Widget build(BuildContext context) {
               ),
               const SizedBox(height: 20),
               Text(
-                isAdmin ? 'Administrador Master' : 'Nome do Funcionário',
+                nome,
                 textAlign: TextAlign.center,
                 style: GoogleFonts.inter(
                   fontSize: 28,
@@ -55,7 +77,7 @@ Widget build(BuildContext context) {
               ),
               const SizedBox(height: 8),
               Text(
-                isAdmin ? 'admin@reportplus.com' : 'funcionario@empresa.com',
+                email,
                 style: const TextStyle(
                   color: Color(0xff7a7a7a),
                   fontSize: 16,
@@ -67,7 +89,7 @@ Widget build(BuildContext context) {
                   Expanded(
                     child: infoCard(
                       'Cargo',
-                      isAdmin ? 'Administrador' : 'Funcionário',
+                      cargo.isEmpty ? (isAdmin ? 'Administrador' : 'Funcionário') : cargo,
                       Icons.admin_panel_settings_outlined,
                     ),
                   ),
@@ -87,7 +109,7 @@ Widget build(BuildContext context) {
                   Expanded(
                     child: infoCard(
                       'Ocorrências',
-                      isAdmin ? '128' : '12',
+                      quantidadeOcorrencias.toString(), 
                       Icons.warning_amber_outlined,
                     ),
                   ),
@@ -104,13 +126,13 @@ Widget build(BuildContext context) {
                 ],
               ),
               const SizedBox(height: 32),
-              buildField('Nome Completo', isAdmin ? 'Administrador Master' : 'Nome do Funcionário'),
+              buildField('Nome Completo', nome),
               const SizedBox(height: 20),
-              buildField('E-mail', isAdmin ? 'admin@reportplus.com' : 'funcionario@empresa.com'),
+              buildField('E-mail', email),
               const SizedBox(height: 20),
               buildField('Telefone', '(14) 99999-9999'),
               const SizedBox(height: 20),
-              buildField('Departamento', isAdmin ? 'TI / Segurança' : 'Operacional'),
+              buildField('Departamento', setorNome),
               const SizedBox(height: 32),
               SizedBox(
                 width: double.infinity,

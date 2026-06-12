@@ -25,17 +25,24 @@ class _SearchPageState extends State<SearchPage> {
     super.dispose();
   }
 
+  String _texto(Map<String, dynamic> item, String campo) {
+    return item[campo]?.toString() ?? '';
+  }
+
   void _search(String query) {
     setState(() {
       final q = query.trim().toLowerCase();
+
       if (q.isEmpty) {
         filteredOcorrencias = List.from(widget.ocorrencias);
       } else {
         filteredOcorrencias = widget.ocorrencias.where((item) {
-          return item['titulo'].toString().toLowerCase().contains(q) ||
-              item['local'].toString().toLowerCase().contains(q) ||
-              item['status'].toString().toLowerCase().contains(q) ||
-              item['prioridade'].toString().toLowerCase().contains(q);
+          return _texto(item, 'titulo').toLowerCase().contains(q) ||
+              _texto(item, 'local').toLowerCase().contains(q) ||
+              _texto(item, 'status').toLowerCase().contains(q) ||
+              _texto(item, 'prioridade').toLowerCase().contains(q) ||
+              _texto(item, 'categoria').toLowerCase().contains(q) ||
+              _texto(item, 'setor').toLowerCase().contains(q);
         }).toList();
       }
     });
@@ -99,6 +106,7 @@ class _SearchPageState extends State<SearchPage> {
                       separatorBuilder: (_, __) => const SizedBox(height: 14),
                       itemBuilder: (context, index) {
                         final item = filteredOcorrencias[index];
+
                         return Container(
                           padding: const EdgeInsets.all(20),
                           decoration: BoxDecoration(
@@ -110,7 +118,9 @@ class _SearchPageState extends State<SearchPage> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                item['titulo'],
+                                _texto(item, 'titulo').isEmpty
+                                    ? 'Sem título'
+                                    : _texto(item, 'titulo'),
                                 style: const TextStyle(
                                   fontSize: 18,
                                   fontWeight: FontWeight.bold,
@@ -118,13 +128,17 @@ class _SearchPageState extends State<SearchPage> {
                               ),
                               const SizedBox(height: 6),
                               Text(
-                                item['local'],
+                                _texto(item, 'local').isEmpty
+                                    ? 'Sem local'
+                                    : _texto(item, 'local'),
                                 style: const TextStyle(
                                   color: Color(0xff7a7a7a),
                                 ),
                               ),
                               const SizedBox(height: 6),
-                              Text('${item['status']} • ${item['prioridade']}'),
+                              Text(
+                                '${_texto(item, 'status').isEmpty ? 'Sem status' : _texto(item, 'status')} • ${_texto(item, 'prioridade').isEmpty ? 'Sem prioridade' : _texto(item, 'prioridade')}',
+                              ),
                             ],
                           ),
                         );

@@ -132,23 +132,28 @@ class _LoginPageState extends State<LoginPage> {
       final tipo = userData['tipo'] as String? ?? 'funcionario';
       final isAdmin = tipo == 'admin';
       final setor = (userData['setor'] as String? ?? '')
-        .trim()
-        .toLowerCase();
+          .trim()
+          .toLowerCase();
+      final nome = userData['nome'] as String? ?? 'Usuário';
+      final email = userData['email'] as String? ?? emailController.text.trim();
+      final cargo = userData['cargo'] as String? ?? '';
+      final setorNome = userData['setorNome'] as String? ?? setor;
 
-      print('SETOR DO USUARIO: $setor');
-
-
-      if (mounted) {
-  Navigator.pushReplacement(
-    context,
-    MaterialPageRoute(
-      builder: (_) => MainScreen(
-        isAdmin: isAdmin,
-        setor: setor,
-      ),
-    ),
-  );
-}
+        if (mounted) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (_) => MainScreen(
+                isAdmin: isAdmin,
+                setor: setor,
+                nome: nome,
+                email: email,
+                cargo: cargo,
+                setorNome: setorNome,
+              ),
+            ),
+          );
+        }
       
     } on FirebaseAuthException catch (e) {
       setState(() {
@@ -973,10 +978,18 @@ class MainScreen extends StatefulWidget {
     super.key,
     required this.isAdmin,
     required this.setor,
+    required this.nome,
+    required this.email,
+    required this.cargo,
+    required this.setorNome,
   });
 
   final bool isAdmin;
   final String setor;
+  final String nome;
+  final String email;
+  final String cargo;
+  final String setorNome;
 
   @override
   State<MainScreen> createState() => _MainScreenState();
@@ -1027,7 +1040,15 @@ class _MainScreenState extends State<MainScreen> {
         ),
         SearchPage(ocorrencias: ocorrencias),
         TeamPage(isAdmin: widget.isAdmin),
-        ProfilePage(isAdmin: widget.isAdmin),
+        ProfilePage(
+        isAdmin: widget.isAdmin,setor: 
+        widget.setor,nome: 
+        widget.nome,
+        email: widget.email,
+        cargo: widget.cargo,
+        setorNome: widget.setorNome,
+        ocorrencias: ocorrencias,
+        ),
       ];
     });
   }
