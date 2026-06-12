@@ -734,7 +734,32 @@ class _DashboardPageState extends State<DashboardPage> {
                 padding: const EdgeInsets.all(28),
                 child: SingleChildScrollView(
                   child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            'Nova Ocorrência',
+                            style: TextStyle(
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          IconButton(
+                            style: IconButton.styleFrom(
+                              backgroundColor: Color(0xFFE0E0E0),
+                              shape: const CircleBorder(),
+                            ),
+                            icon: const Icon(Icons.close),
+                            onPressed: () {
+                              Navigator.of(context).pop();
+                            },
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 20),
+
                       TextField(
                         controller: tituloController,
                         decoration: inputDecoration('Título'),
