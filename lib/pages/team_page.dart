@@ -30,15 +30,12 @@ class _TeamPageState extends State<TeamPage> {
       .replaceAll('ç', 'c')}@empresa.com';
 }
   void _abrirCadastroCategoria() async {
-    print('clicou em categoria');
 
     final nomeController = TextEditingController();
 
     final setoresSnapshot = await FirebaseFirestore.instance
         .collection('setores')
         .get();
-
-    print('setores encontrados: ${setoresSnapshot.docs.length}');
 
     final setores = setoresSnapshot.docs
         .map((doc) {

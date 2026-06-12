@@ -1,10 +1,10 @@
 # appf
 
-A new Flutter project.
+Sistema de reporte de problemas.
 
 ## Getting Started
 
-This project is a starting point for a Flutter application.
+This project is a starting point for a Report+.
 
 A few resources to get you started if this is your first Flutter project:
 

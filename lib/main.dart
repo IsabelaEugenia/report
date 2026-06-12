@@ -1,6 +1,4 @@
-import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:file_picker/file_picker.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
@@ -70,6 +68,7 @@ class LoginPage extends StatefulWidget {
 class _LoginPageState extends State<LoginPage> {
   final emailController = TextEditingController();
   final senhaController = TextEditingController();
+  bool _mostrarSenha = false;
   bool _carregando = false;
   String? _erro;
 
@@ -138,6 +137,7 @@ class _LoginPageState extends State<LoginPage> {
       final email = userData['email'] as String? ?? emailController.text.trim();
       final cargo = userData['cargo'] as String? ?? '';
       final setorNome = userData['setorNome'] as String? ?? setor;
+      final telefone = userData['telefone'] as String? ?? '';
 
         if (mounted) {
           Navigator.pushReplacement(
@@ -150,6 +150,7 @@ class _LoginPageState extends State<LoginPage> {
                 email: email,
                 cargo: cargo,
                 setorNome: setorNome,
+                telefone: telefone,
               ),
             ),
           );
@@ -207,10 +208,54 @@ class _LoginPageState extends State<LoginPage> {
                 ),
                 const SizedBox(height: 16),
                 TextField(
-                  controller: senhaController,
-                  obscureText: true,
-                  decoration: inputDecoration('Senha'),
+                controller: senhaController,
+                obscureText: !_mostrarSenha,
+                decoration: InputDecoration(
+                  hintText: 'Senha',
+
+                  filled: true,
+                  fillColor: Colors.white,
+
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 18,
+                  ),
+
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(18),
+                    borderSide: const BorderSide(
+                      color: Color(0xffe8e8e8),
+                    ),
+                  ),
+
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(18),
+                    borderSide: const BorderSide(
+                      color: Color(0xffe8e8e8),
+                    ),
+                  ),
+
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(18),
+                    borderSide: const BorderSide(
+                      color: Color(0xffa61d2d),
+                    ),
+                  ),
+
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                      _mostrarSenha
+                          ? Icons.visibility_off
+                          : Icons.visibility,
+                    ),
+                    onPressed: () {
+                      setState(() {
+                        _mostrarSenha = !_mostrarSenha;
+                      });
+                    },
+                  ),
                 ),
+              ),
                 Align(
                   alignment: Alignment.centerRight,
                   child: TextButton(
@@ -537,17 +582,6 @@ class _DashboardPageState extends State<DashboardPage> {
                   color: Colors.grey.shade200,
                 ),
                 clipBehavior: Clip.hardEdge,
-                child: item['imagem'] != null
-                    ? Image.file(
-                        item['imagem'] as File,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => const Icon(Icons.broken_image, color: Colors.grey),
-                      )
-                    : Image.network(
-                        item['imagemUrl'] as String,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => const Icon(Icons.broken_image, color: Colors.grey),
-                      ),
               ),
             Expanded(
               child: Column(
@@ -718,7 +752,6 @@ class _DashboardPageState extends State<DashboardPage> {
     final descricaoController = TextEditingController();
 
     String status = 'Em análise';
-    File? imagem;
     double prioridadeValue = 0;
     String categoria = categoriasFirebase.first['id'].toString();
 
@@ -817,37 +850,7 @@ class _DashboardPageState extends State<DashboardPage> {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [Text('Baixa'), Text('Média'), Text('Alta')],
                       ),
-                      const SizedBox(height: 18),
-                      SizedBox(
-                        width: double.infinity,
-                        height: 54,
-                        child: OutlinedButton.icon(
-                          onPressed: () async {
-                            final result = await FilePicker.platform.pickFiles(type: FileType.image);
-                            if (result != null && result.files.single.path != null) {
-                              setStateDialog(() {
-                                imagem = File(result.files.single.path!);
-                              });
-                            }
-                          },
-                          icon: const Icon(Icons.image_outlined),
-                          label: Text(
-                            imagem == null ? 'Importar imagem' : imagem!.path.split(Platform.pathSeparator).last,
-                          ),
-                        ),
-                      ),
-                      if (imagem != null) ...[
-                        const SizedBox(height: 18),
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(18),
-                          child: Image.file(
-                            imagem!,
-                            width: double.infinity,
-                            height: 190,
-                            fit: BoxFit.cover,
-                          ),
-                        ),
-                      ],
+                      
                       const SizedBox(height: 24),
                       SizedBox(
                         width: double.infinity,
@@ -868,7 +871,6 @@ class _DashboardPageState extends State<DashboardPage> {
                               'status': status,
                               'prioridade': _prioridadeTexto(prioridadeValue),
                               'data': DateFormat('dd/MM/yyyy').format(DateTime.now()),
-                              'imagem': null,
                             };
                             final docRef = await FirebaseFirestore.instance
                                 .collection('ocorrencias')
@@ -1007,6 +1009,7 @@ class MainScreen extends StatefulWidget {
     required this.email,
     required this.cargo,
     required this.setorNome,
+    required this.telefone,
   });
 
   final bool isAdmin;
@@ -1015,6 +1018,7 @@ class MainScreen extends StatefulWidget {
   final String email;
   final String cargo;
   final String setorNome;
+  final String telefone;
 
   @override
   State<MainScreen> createState() => _MainScreenState();
@@ -1033,7 +1037,6 @@ class _MainScreenState extends State<MainScreen> {
     Future<void> carregarOcorrencias() async {
       Query<Map<String, dynamic>> query =
           FirebaseFirestore.instance.collection('ocorrencias');
-          print('BUSCANDO OCORRENCIAS DO SETOR: ${widget.setor}');
 
 
       if (!widget.isAdmin) {
@@ -1041,8 +1044,6 @@ class _MainScreenState extends State<MainScreen> {
       }
 
       final snapshot = await query.get();
-       print('OCORRENCIAS ENCONTRADAS: ${snapshot.docs.length}');
-
       ocorrencias = snapshot.docs.map((doc) {
         return {
           'id': doc.id,
@@ -1073,6 +1074,7 @@ class _MainScreenState extends State<MainScreen> {
         cargo: widget.cargo,
         setorNome: widget.setorNome,
         ocorrencias: ocorrencias,
+        telefone: widget.telefone,
         ),
       ];
     });

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../main.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 
 
@@ -11,6 +12,7 @@ class ProfilePage extends StatelessWidget {
   final String email;
   final String cargo;
   final String setorNome;
+  final String telefone;
   final List<Map<String, dynamic>>? ocorrencias;
 
   const ProfilePage({
@@ -22,6 +24,7 @@ class ProfilePage extends StatelessWidget {
     required this.cargo,
     required this.setorNome,
     required this.ocorrencias,
+    required this.telefone,
   });
 
   @override
@@ -31,6 +34,10 @@ class ProfilePage extends StatelessWidget {
     final quantidadeOcorrencias = isAdmin
         ? listaOcorrencias.length
         : listaOcorrencias.where((o) => o['setor'] == setor).length;
+        
+    final nomeController = TextEditingController(text: nome);
+    final cargoController = TextEditingController(text: cargo);
+    final telefoneController = TextEditingController(text: telefone);
 
     return SafeArea(
     child: Center(
@@ -125,15 +132,12 @@ class ProfilePage extends StatelessWidget {
                   ],
                 ],
               ),
-              const SizedBox(height: 32),
-              buildField('Nome Completo', nome),
-              const SizedBox(height: 20),
-              buildField('E-mail', email),
-              const SizedBox(height: 20),
-              buildField('Telefone', '(14) 99999-9999'),
-              const SizedBox(height: 20),
-              buildField('Departamento', setorNome),
-              const SizedBox(height: 32),
+              buildField('Nome Completo', nomeController),
+              buildField('E-mail', TextEditingController(text: email), readOnly: true),
+              buildField('Telefone', telefoneController),
+              buildField('Cargo', cargoController),
+              buildField('Departamento', TextEditingController(text: setorNome), readOnly: true),
+
               SizedBox(
                 width: double.infinity,
                 height: 56,
@@ -144,7 +148,36 @@ class ProfilePage extends StatelessWidget {
                       borderRadius: BorderRadius.circular(18),
                     ),
                   ),
-                  onPressed: () {},
+                 onPressed: () async {
+                  final snapshot = await FirebaseFirestore.instance
+                      .collection('usuarios')
+                      .where('email', isEqualTo: email)
+                      .get();
+
+                  if (snapshot.docs.isEmpty) return;
+
+                  await snapshot.docs.first.reference.update({
+                    'nome': nomeController.text.trim(),
+                    'cargo': cargoController.text.trim(),
+                    'telefone': telefoneController.text.trim(),
+                  });
+
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Alterações salvas com sucesso.'),
+                      ),
+                    );
+                    Future.delayed(const Duration(seconds: 1), () {
+                    if (context.mounted) {
+                      Navigator.of(context).pushAndRemoveUntil(
+                        MaterialPageRoute(builder: (_) => const LoginPage()),
+                        (route) => false,
+                      );
+                    }
+                  });
+                  }
+                },
                   icon: const Icon(Icons.save_outlined),
                   label: const Text('Salvar Alterações'),
                 ),
@@ -227,50 +260,45 @@ Widget infoCard(
   );
 }
 
-
   Widget buildField(
-    String titulo,
-    String valor,
-  ) {
-    return Column(
+  String titulo,
+  TextEditingController controller, {
+  bool readOnly = false,
+}) {
+  return Padding(
+    padding: const EdgeInsets.only(bottom: 20),
+    child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-
         Text(
           titulo,
           style: const TextStyle(
             fontWeight: FontWeight.bold,
           ),
         ),
-
         const SizedBox(height: 10),
-
         TextField(
-          controller: TextEditingController(text: valor),
-
+          controller: controller,
+          readOnly: readOnly,
           decoration: InputDecoration(
             filled: true,
             fillColor: Colors.white,
-
             contentPadding: const EdgeInsets.symmetric(
               horizontal: 20,
               vertical: 18,
             ),
-
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(18),
               borderSide: const BorderSide(
                 color: Color(0xffe8e8e8),
               ),
             ),
-
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(18),
               borderSide: const BorderSide(
                 color: Color(0xffe8e8e8),
               ),
             ),
-
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(18),
               borderSide: const BorderSide(
@@ -280,6 +308,7 @@ Widget infoCard(
           ),
         ),
       ],
-    );
-  }
+    ),
+  );
+}
 }
