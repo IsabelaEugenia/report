@@ -1,17 +1,33 @@
-# appf
+# Report+
 
-Sistema de reporte de problemas.
+Sistema de reporte e acompanhamento de ocorrências empresariais desenvolvido em Flutter e Firebase.
 
-## Getting Started
+## Tecnologias
 
-This project is a starting point for a Report+.
+* Flutter
+* Firebase Authentication
+* Cloud Firestore
+* Google Fonts
 
-A few resources to get you started if this is your first Flutter project:
+## Como executar
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+1. Instalar Flutter.
+2. Executar:
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+flutter pub get
+
+3. Executar:
+
+flutter run
+
+## Integrantes
+
+* Bruno Mansano dos Passos
+* Diego Costanzo Galvão
+* Isabela Eugênia Teixeira Ferraz de Oliveira
+* João Igor Alves Oros Reis
+* Lucas Augusto Martins
+
+Curso: Ciência da Computação
+Programa: Fábrica de Softwares
+
